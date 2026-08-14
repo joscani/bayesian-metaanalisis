@@ -1,0 +1,22 @@
+# Modelos brms/Stan grandes (decisión aplazada, ver PLAN.md > "El modelo en git")
+models/*.rds
+models/*.exe
+
+# Artefactos de Quarto (quarto publish gh-pages renderiza y empuja aparte;
+# no hace falta versionar el HTML en la rama principal)
+/.quarto/
+_site/
+slides/index.html
+slides/index-offline.html
+slides/index_files/
+slides/.quarto/
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+renv/staging/
+
+**/*.quarto_ipynb

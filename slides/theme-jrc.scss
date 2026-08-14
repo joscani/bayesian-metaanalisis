@@ -1,0 +1,63 @@
+/*-- scss:defaults --*/
+
+$body-bg: #fdfdfd;
+$body-color: #1a1a1a;
+$link-color: #005999;
+
+$presentation-heading-color: #1a1a1a;
+$presentation-heading-font-weight: 700;
+$presentation-font-size-root: 34px;
+$presentation-h2-font-size: 1.7em;
+
+$code-block-bg: #f4f4f4;
+$code-block-font-size: 0.7em;
+
+/*-- scss:rules --*/
+
+.reveal .slide-number {
+  color: #888;
+}
+
+.reveal .subtitle,
+.reveal h2 + p em {
+  color: #555;
+}
+
+.reveal .footer-jrc {
+  position: fixed;
+  bottom: 6px;
+  left: 24px;
+  font-size: 0.35em;
+  color: #999;
+}
+
+.small-code pre code {
+  font-size: 0.65em;
+}
+
+.partido-pp            { color: #005999; font-weight: bold; }
+.partido-psoe          { color: #FF0126; font-weight: bold; }
+.partido-vox           { color: #51962A; font-weight: bold; }
+.partido-por-andalucia { color: #E51C55; font-weight: bold; }
+.partido-adelante      { color: #8C66F1; font-weight: bold; }
+
+.reveal .callout {
+  border-left: 4px solid #005999;
+  padding: 0.3em 0.8em;
+  background: #f0f4f7;
+  font-size: 0.85em;
+}
+
+.center-text {
+  text-align: center;
+}
+
+/* Las figuras de R vienen envueltas en divs de knitr (.cell-output-display),
+   lo que rompe la detección de auto-stretch de Quarto. Limitamos la altura
+   a mano para que nunca desborden el slide. */
+.reveal .slide-level2 .cell-output-display img,
+.reveal .slide-level3 .cell-output-display img {
+  max-height: 60vh;
+  width: auto;
+  max-width: 100%;
+}

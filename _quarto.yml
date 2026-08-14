@@ -1,0 +1,12 @@
+project:
+  type: default
+  render:
+    - slides/index.qmd
+
+format:
+  revealjs:
+    theme: [default, slides/theme-jrc.scss]
+    slide-number: c/t
+    incremental: false
+    code-line-numbers: true
+    fig-align: center
