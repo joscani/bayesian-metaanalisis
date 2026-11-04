@@ -132,11 +132,12 @@ Cada encuesta se convierte en votos: porcentaje publicado × tamaño muestral. C
 ```{r}
 #| echo: true
 pct <- rbind(
-  A = c(PP = 32, PSOE = 27, VOX = 19, SUMAR = 6, PODEMOS = 3, SALF = 2, BLOQUE = 11),
-  B = c(PP = 30, PSOE = 28, VOX = 20, SUMAR = 7, PODEMOS = 2, SALF = 2, BLOQUE = 11)
+  A = c(PP = 32, PSOE = 27, VOX = 19, SUMAR = 6,
+        PODEMOS = 3, SALF = 2, BLOQUE = 11),
+  B = c(PP = 30, PSOE = 28, VOX = 20, SUMAR = 7,
+        PODEMOS = 2, SALF = 2, BLOQUE = 11)
 )
 n <- c(A = 1000, B = 3000)
-
 cell_counts <- round(pct / 100 * n)
 cell_counts
 ```

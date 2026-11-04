@@ -34,3 +34,28 @@ leer_fig("fig_canarias")
 #| label: g-fig-mayorias-hist
 leer_fig("fig_mayorias_hist")
 ```
+
+## Cada draw es un Congreso
+
+Con los draws, una pregunta sobre mayorías es contar. Código real, sobre las simulaciones de esta charla:
+
+```{r}
+#| echo: true
+#| collapse: true
+draws <- readRDS(here("outputs", "escanos_draws.rds"))
+# P(PP + VOX tienen mayoría absoluta)
+mean(draws$PP + draws$VOX >= 176)
+# P(PP tiene más escaños que PSOE)
+mean(draws$PP > draws$PSOE)
+# intervalo de la suma
+quantile(draws$PP + draws$VOX, c(0.05, 0.5, 0.95))
+```
+
+::: {.notes}
+- Cada fila de `draws` es un reparto completo de 350 escaños. `mean()` sobre una condición lógica da la proporción de draws donde se cumple.
+- Esa proporción es la probabilidad posterior, condicionada al modelo y a sus supuestos. No es la probabilidad de lo que pasará el domingo sin más.
+- Sumar draw a draw conserva la dependencia entre partidos. Con correlación negativa, el intervalo de PP + VOX es más estrecho de lo que sale al sumar los dos intervalos.
+- No se pueden sumar los extremos de dos intervalos: ese resultado no es el IC 90 % de la suma.
+- Cualquier otra pregunta funciona igual: basta con escribir la condición, sin ajustar otro modelo.
+- Con 6.000 draws, una probabilidad cerca de 0 o de 1 tiene ruido de Monte Carlo: no conviene dar muchos decimales.
+:::
