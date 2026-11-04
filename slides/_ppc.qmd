@@ -3,6 +3,7 @@
 `pp_check()` no está implementado para la familia multinomial: lo hago a mano.
 
 ```{r}
+#| label: g-fig-ppc-posterior
 #| fig-height: 4.6
 leer_fig("fig_ppc_posterior")
 ```
@@ -16,6 +17,7 @@ Modelo 1, sin capas de error. Media entre casas, con todos los efectos aleatorio
 ::: columns
 ::: {.column width="58%"}
 ```{r}
+#| label: g-fig-posterior-dia-e
 #| fig-width: 7
 #| fig-height: 5.5
 leer_fig("fig_posterior_dia_e")

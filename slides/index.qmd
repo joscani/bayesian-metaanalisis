@@ -288,6 +288,7 @@ dhondt <- function(votos, escanos) {
 ## ¿Y si lo hubiera hecho antes?
 
 ```{r}
+#| label: g-fig-backtest
 #| fig-height: 4.6
 leer_fig("fig_backtest")
 ```
@@ -382,6 +383,7 @@ ESS mínimo: el menor de `Bulk_ESS` y `Tail_ESS`, en efectos fijos y desviacione
 ## Validación real: Andalucía, 17-M
 
 ```{r}
+#| label: g-fig-heatmap-andalucia
 #| fig-height: 5
 leer_fig("fig_heatmap_andalucia")
 ```

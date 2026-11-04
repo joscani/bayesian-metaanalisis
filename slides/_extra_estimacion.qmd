@@ -17,6 +17,7 @@ tabla_encuestas(leer("tabla_encuestas_m2"))
 ## Efectos casa
 
 ```{r}
+#| label: g-fig-ranef-vox
 #| fig-height: 5
 leer_fig("fig_ranef_vox")
 ```
@@ -59,6 +60,7 @@ cand$escanos |>
 ## PP y VOX, conjuntamente
 
 ```{r}
+#| label: g-fig-heatmap-ppvox
 #| fig-height: 5
 leer_fig("fig_heatmap_ppvox")
 ```

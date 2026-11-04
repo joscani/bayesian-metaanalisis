@@ -1,5 +1,6 @@
 ## Provincia: qué produce
 
 ```{r}
+#| label: g-fig-provincial
 leer_fig("fig_provincial")
 ```

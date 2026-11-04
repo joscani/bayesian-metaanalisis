@@ -1,17 +1,20 @@
 ## Resultado: las candidaturas mayores
 
 ```{r}
+#| label: g-fig-ridges-grandes
 leer_fig("fig_ridges_grandes")
 ```
 
 ## Resultado: el resto
 
 ```{r}
+#| label: g-fig-ridges-resto
 leer_fig("fig_ridges_resto")
 ```
 
 ## ¿Qué mayoría?
 
 ```{r}
+#| label: g-fig-mayorias-hist
 leer_fig("fig_mayorias_hist")
 ```

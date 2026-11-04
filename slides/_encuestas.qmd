@@ -1,5 +1,6 @@
 ## Las encuestas
 
 ```{r}
+#| label: g-fig-encuestas-tiempo
 leer_fig("fig_encuestas_tiempo")
 ```
