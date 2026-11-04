@@ -1,0 +1,32 @@
+## ¿Funciona?
+
+`pp_check()` no está implementado para la familia multinomial: lo hago a mano.
+
+```{r}
+#| fig-height: 4.6
+leer_fig("fig_ppc_posterior")
+```
+
+`r pct_es(leer("cobertura_ppc"), 0)` de los valores publicados cae dentro del IC 90 % predicho.
+
+## Posterior del día E {.smaller}
+
+Modelo 1, sin capas de error. Media entre casas, con todos los efectos aleatorios.
+
+::: columns
+::: {.column width="58%"}
+```{r}
+#| fig-width: 7
+#| fig-height: 5.5
+leer_fig("fig_posterior_dia_e")
+```
+:::
+::: {.column width="42%"}
+```{r}
+leer("resumen_dia_e") |>
+  mutate(ic90 = sprintf("%s – %s", num_es(low), num_es(high)), mediana = num_es(mediana)) |>
+  select(partido, mediana, ic90) |>
+  knitr::kable(col.names = c("Partido", "Mediana (%)", "IC 90 % (%)"), align = "lrr")
+```
+:::
+:::

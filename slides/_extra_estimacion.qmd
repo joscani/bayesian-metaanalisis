@@ -1,0 +1,48 @@
+## Efectos casa
+
+```{r}
+#| fig-height: 5
+leer_fig("fig_ranef_vox")
+```
+
+## ¿De dónde sale la incertidumbre? {.smaller}
+
+La capa de error histórico es la que más ensancha el intervalo de PP + VOX.
+
+```{r}
+leer("descomposicion") |>
+  transmute(
+    Capas = escenario,
+    `Mediana (escaños)` = num_es(mediana, 0),
+    `Ancho IC 90 % (escaños)` = num_es(ic90_ancho, 0),
+    `P(≥ 176)` = pct_es(p_mayoria)
+  ) |>
+  knitr::kable(align = "lrrr")
+```
+
+4.000 simulaciones por fila, con las candidaturas de cada provincia.
+
+## Candidaturas unidas frente a reales {.smaller}
+
+Las dos simulaciones comparten modelo, semilla y capas. Solo cambia la regla provincial.
+
+```{r}
+cand <- leer("candidaturas")
+cand$escanos |>
+  filter(partido %in% c("PP", "PSOE", "VOX", "SUMAR", "PODEMOS", "AA", "ERC")) |>
+  mutate(valor = sprintf("%d (%d – %d)", as.integer(mediana), as.integer(q05), as.integer(q95))) |>
+  select(escenario, partido, valor) |>
+  pivot_wider(names_from = escenario, values_from = valor) |>
+  mutate(partido = if_else(partido == "SUMAR", "Frente Amplio", nombres_partido[partido])) |>
+  knitr::kable(
+    col.names = c("Partido", "Unidas: escaños (IC 90 %)", "Reales: escaños (IC 90 %)"),
+    align = "lrr"
+  )
+```
+
+## PP y VOX, conjuntamente
+
+```{r}
+#| fig-height: 5
+leer_fig("fig_heatmap_ppvox")
+```

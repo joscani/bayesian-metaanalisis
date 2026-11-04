@@ -1,0 +1,5 @@
+## Provincia: qué produce
+
+```{r}
+leer_fig("fig_provincial")
+```

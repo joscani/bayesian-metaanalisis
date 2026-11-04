@@ -2,11 +2,16 @@
 title: "De la encuesta al escaño"
 subtitle: "Un flujo de trabajo bayesiano en R para la agregación electoral e incertidumbre provincial"
 author: "José Luis Cañadas Reche"
-date: "Jornadas de R de Canarias · 2026"
+institute: "Jornadas de R de Canarias"
+date: 2026-11-25
+date-format: long
 lang: es
 format:
   revealjs:
     theme: [default, theme-jrc.scss]
+    slide-level: 2
+params:
+  estimacion_29n: true
 execute:
   echo: false
   warning: false
@@ -22,55 +27,73 @@ knitr:
 library(tidyverse)
 library(here)
 
-leer_fig <- function(nombre) readRDS(here("outputs", "figuras", paste0(nombre, ".rds")))
+source(here("R", "00_setup.R"))
 
-resumen_dia_d    <- readRDS(here("outputs", "resumen_dia_d.rds"))
-resumen_mayorias <- readRDS(here("outputs", "resumen_mayorias.rds"))
-p_aa_gana        <- readRDS(here("outputs", "p_aa_gana.rds"))
-convergencia     <- readRDS(here("outputs", "convergencia.rds"))
-resultado_real   <- read_csv(here("data", "resultado_real_2026.csv"), show_col_types = FALSE)
+# con estimacion_29n = false desaparecen las slides con encuestas o estimaciones
+# del 29N. Se renderiza con: quarto render slides/index.qmd -P estimacion_29n:false
+estim <- isTRUE(params$estimacion_29n)
+
+leer_fig <- function(nombre) readRDS(here("outputs", "figuras", paste0(nombre, ".rds")))
+leer <- function(nombre) readRDS(here("outputs", paste0(nombre, ".rds")))
+
+procedencia <- leer("procedencia")
+capa_error <- leer("capa_error")
+diagnosticos <- leer("diagnosticos")
+
+comparacion <- read_csv(here("data", "backtest_prov_comparacion.csv"), show_col_types = FALSE)
+cob_prov <- function(v) {
+  comparacion$cobertura[comparacion$variante == v & comparacion$familia == "TOTAL"]
+}
+backtest <- read_csv(here("data", "backtest_escanos.csv"), show_col_types = FALSE)
+reglas <- read_csv(
+  here("data", "coaliciones_izquierda_29N_provincias.csv"),
+  col_types = cols(.default = col_character())
+) |>
+  count(regla)
+n_regla <- function(r) reglas$n[reglas$regla == r]
+
+corte <- format(procedencia$ultima_encuesta, "%d/%m/%Y")
 ```
 
 ## El problema
 
-Las encuestas dan **porcentajes**. El Parlamento de Andalucía reparte **escaños**.
+Las encuestas dan **porcentajes**. El Congreso reparte **escaños**.
 
 ::: {.incremental}
-- 109 escaños, repartidos en **8 circunscripciones provinciales**
-- Cada provincia aplica **D'Hondt** con barrera del 3%
-- Un mismo % regional puede dar mayorías muy distintas según cómo se reparta por provincia
+- 350 escaños, repartidos en **52 circunscripciones**
+- Cada provincia aplica **D'Hondt** con barrera del 3 %
+- Un mismo % nacional puede dar mayorías muy distintas
 :::
 
 ::: {.fragment}
-**La pregunta real no es "¿qué % saca el PP?"**, es *"¿qué probabilidad tiene cada reparto posible de escaños?"*
+**La pregunta real no es "¿qué % saca el PP?"**, es *"¿qué probabilidad tiene cada reparto de escaños?"*
 :::
 
 ## Por qué no basta un número
 
-> "El PP rozará la mayoría absoluta"
+> "PP y VOX sumarían mayoría absoluta"
 
-Un titular así esconde una distribución entera de escenarios posibles.
+Un titular así esconde una distribución entera de escenarios.
 
 ::: {.fragment}
-Con un enfoque bayesiano no perseguimos **el número que más se acerque**,
-perseguimos **la distribución de plausibilidad completa** — y con ella,
-la probabilidad de cada mayoría.
+Con un enfoque bayesiano no perseguimos **el número**.
+Perseguimos **la distribución completa** y, con ella, la probabilidad de cada mayoría.
 :::
 
 ## El flujo en una imagen
 
-::: {.center-text style="font-size: 0.85em; line-height: 2.2;"}
-**Encuestas** (23, distintas empresas)
+::: {.center-text style="font-size: 0.72em; line-height: 1.75;"}
+**Encuestas**
 
-⬇
+⬇ *dos modelos brms en cascada*
 
-**Meta-análisis bayesiano** → posterior regional
+**Posterior nacional de 14 categorías**
 
 ⬇ *+ error histórico de las encuestas*
 
 **Posterior ajustado**
 
-⬇ *+ reparto provincial (Dirichlet)*
+⬇ *+ reparto provincial con dos efectos + candidaturas de cada provincia*
 
 **Posterior provincial**
 
@@ -81,119 +104,67 @@ la probabilidad de cada mayoría.
 
 ## Los datos
 
-- **23 encuestas** publicadas entre marzo y mayo de 2026
-- Fuente: tabla de sondeos de Wikipedia (EN)
+- Fuentes: [ciento76](https://www.ciento76.es/encuestas) y [objetivo176](https://objetivo176.es/encuestas)
 - Solo encuestas con **tamaño muestral publicado**
-- Columna `resto`: complemento a 100 de los 5 partidos principales
+- Sin CIS ni ElectoPanel en el modelo de los grandes
+- Modelo 1: **`r procedencia$n_encuestas_m1` encuestas de `r procedencia$n_casas_m1` casas**, hasta el `r corte`
+- Modelo 2: **`r procedencia$n_encuestas_m2` encuestas de `r procedencia$n_casas_m2` casas**, desde junio de 2025
 
-```{r}
-#| label: fig-encuestas
-leer_fig("fig_encuestas_tiempo")
+```{r, child=if (estim) "_encuestas.qmd"}
 ```
 
-## El modelo
+## Un problema nuevo: los regionales
 
-Modelo **multinomial bayesiano** con `brms`: cada encuesta aporta un vector
-de votos por partido.
+La mayoría de encuestas no publica PNV, BNG o Junts. Sin ellos no hay reparto provincial coherente.
+
+::: {.incremental}
+- **Modelo 1:** PP, PSOE, VOX, SUMAR, Podemos, SALF y **BLOQUE**
+- **Modelo 2:** cómo se reparte el BLOQUE entre 8 subceldas
+- Cada draw del modelo 1 da el *tamaño*; cada draw del modelo 2, la *composición*
+:::
+
+## Modelo 1
+
+Modelo **multinomial bayesiano** con `brms`: cada encuesta aporta un vector de votos.
 
 ```{r}
 #| echo: true
 #| eval: false
 #| label: snippet-modelo
-formula <- brmsformula(
-  cell_counts | trials(n) ~ time + (time | empresa)
+form <- brmsformula(
+  cell_counts | trials(n) ~ time + (1 | encuestadora)
 )
-
-brm(formula, df_wider, family = multinomial(),
-    iter = 4000, warmup = 1000, chains = 4,
-    control = list(adapt_delta = 0.95))
+brm(form, dat, multinomial(),
+    prior = priors_multinomial(form, dat),
+    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
+    control = list(adapt_delta = 0.95, max_treedepth = 12))
 ```
 
 ::: {.incremental}
-- `cell_counts | trials(n)`: composición multinomial (los 6 partidos suman `n`)
-- `(time | empresa)`: cada casa encuestadora tiene su propio intercepto y tendencia
-- `time`: días hasta las elecciones, recoge la evolución temporal
+- `(1 | encuestadora)`: el **efecto casa**, sin pendiente propia
+- `time`: días desde el 1 de julio; una tendencia común por partido
+- En Andalucía era `(time | empresa)`: con pocas encuestas por casa, no se aprende
 :::
 
-## Prior predictive check
+## Modelo 2 y cómo encajan
 
-*(Opcional — solo si sobra tiempo)*
-
-Los priors por defecto de `brms` en multinomial son **impropios** (flat):
-no se puede muestrear solo del prior. Sustituimos por priors propios,
-débilmente informativos en escala log-odds.
+`trials` son los votos **del BLOQUE**, no la muestra. Ejemplo de juguete:
 
 ```{r}
 #| echo: true
-#| eval: false
-priors_ppc <- priors |>
-  mutate(prior = case_when(
-    prior != ""          ~ prior,
-    class == "b"         ~ "normal(0, 2)",
-    class == "Intercept" ~ "normal(0, 2)",
-    class == "sd"        ~ "exponential(1)",
-    TRUE                 ~ prior
-  ))
+# un draw del modelo 2: composición del BLOQUE
+c2 <- c(ERC = 42, Junts = 18, PNV = 13, EH_Bildu = 15,
+        BNG = 8, CC = 5, UPN = 2, RESTO = 7) / 110
+# un draw del modelo 1
+d1 <- c(PP = 32.6, PSOE = 27.1, VOX = 19.2, FA = 5.2,
+        Podemos = 2.8, SALF = 1.8, BLOQUE = 11.3)
+
+draw <- c(d1[1:6], d1[["BLOQUE"]] * c2)
+round(draw[c("PP", "ERC", "PNV")], 1); sum(draw)
 ```
 
-`Normal(0, 2)` en log-odds cubre de sobra el rango 0-100% de voto;
-`Exponential(1)` restringe las desviaciones a positivas con cola moderada.
-
-## Diagnósticos {.smaller}
-
-*(Opcional — solo si sobra tiempo)*
-
-```{r}
-#| label: tbl-convergencia
-convergencia$tabla |>
-  filter(str_detect(param, "Intercept")) |>
-  select(param, Estimate, Rhat, Bulk_ESS) |>
-  knitr::kable(digits = 3)
+```{r, child=if (estim) "_ppc.qmd"}
 ```
-
-`r convergencia$n_divergentes` de 12000 transiciones divergentes (0.15%) —
-el resto de diagnósticos (interceptos por partido; las pendientes `_time`
-son igual de limpias), Rhat ≈ 1, ESS > 3700.
-
-## Efectos por empresa
-
-*(Opcional — solo si sobra tiempo)*
-
-¿Qué casa encuestadora se desvía sistemáticamente, y hacia dónde?
-
-```{r}
-leer_fig("fig_ranef_vox")
-```
-
-## ¿Funciona?
-
-`pp_check()` no está implementado para la familia multinomial: lo hacemos
-a mano, comparando proporciones predichas vs. observadas por encuesta.
-
-```{r}
-leer_fig("fig_ppc_posterior")
-```
-
-## Posterior día D {.smaller}
-
-Tratamos las elecciones como una "nueva encuesta" con `time = 0` y empresa desconocida.
-
-::: columns
-::: {.column width="50%"}
-```{r}
-leer_fig("fig_posterior_dia_d")
-```
-:::
-::: {.column width="50%" style="white-space: nowrap;"}
-```{r}
-#| label: tbl-dia-d
-resumen_dia_d |>
-  mutate(ic90 = sprintf("%.1f–%.1f", low, high)) |>
-  select(partido, media, ic90) |>
-  knitr::kable(col.names = c("Partido", "Media", "IC 90%"), digits = 1)
-```
-:::
-:::
 
 ## Aquí acaba la mayoría de agregadores…
 
@@ -201,113 +172,81 @@ resumen_dia_d |>
 …y aquí empieza lo interesante.
 :::
 
-## Tres fuentes de incertidumbre
+## Cuatro fuentes de incertidumbre
 
 ::: {.incremental style="font-size: 0.9em;"}
-1. **El modelo bayesiano de encuestas** — ¿cuánto voto tiene realmente cada
-   partido a nivel andaluz?
-2. **Error histórico de las encuestas** — se equivocan, y de forma correlada
-   entre partidos
-3. **Reparto provincial** — las encuestas no dan (fiablemente) datos por
-   provincia, hay que asumir algo
+1. **El modelo de encuestas:** ¿cuánto voto tiene cada partido?
+2. **El error histórico:** las encuestas se equivocan en conjunto
+3. **El reparto provincial:** las encuestas nacionales no lo publican
+4. **Las candidaturas:** no son iguales en todas las provincias
 :::
 
 ## El error histórico
 
-Cuando se sobreestima al PP normalmente se infraestima a Vox (trasvase de
-voto útil): **ρ(PP, Vox) ≈ −0.5**.
+124 encuestas de la última semana de **5 generales**, de 2015 a 2023.
 
-El bloque de izquierda falla o acierta en bloque: **ρ(PSOE, Por Andalucía) ≈ +0.5**.
+::: {.incremental}
+- Las encuestas infraestiman al PSOE 1,3 puntos; corrijo la mitad, **+`r num_es(capa_error$mu[["PSOE"]], 1)`**
+- Desviación típica entre 1,3 y 2,6 puntos según el partido
+- **ρ(PP, VOX) = +`r num_es(capa_error$cor_pp_vox, 1)`**
+:::
 
 ::: {.callout style="margin-top: 1em;"}
-Matriz de correlación fijada a criterio experto — con solo 2-3 elecciones
-con datos completos (2022, 2018) no hay muestra suficiente para estimarla.
+En Andalucía fijé esa correlación a mano en −0,5. Los datos dicen lo contrario: cuando las encuestas se pasan con el PP, también se pasan con VOX.
 :::
 
-## En código
+## Provincia: la idea
 
-Añadimos al posterior un error extraído de una **normal multivariante**
-con esa matriz de correlación:
+Hipótesis: cada partido mantiene su desvío provincial del 23J.
+
+::: {.center-text style="font-size: 0.8em; margin-top: 0.8em;"}
+`% provincia = % nacional × (% provincia 23J / % nacional 23J)`
+:::
+
+::: {.fragment style="margin-top: 1em;"}
+**¿Cuánto hay que perturbar ese ratio?** En Andalucía usé una Dirichlet con un divisor elegido a mano.
+
+Backtest provincial, 912 celdas: promete 90 %, **cubre `r pct_es(cob_prov("dirichlet (baseline)"), 0)`**.
+:::
+
+## Provincia: dos efectos con brms
+
+El cambio de ratio tiene un efecto de **comunidad** y otro de **provincia**.
 
 ```{r}
 #| echo: true
 #| eval: false
-error_draws <- MASS::mvrnorm(
-  n_draws, mu = rep(0, 6), Sigma = Sigma_prop
-)
-
-draw_adj <- pmax(draws_mat + error_draws, 0)  # sin proporciones negativas
-draw_adj <- draw_adj / rowSums(draw_adj)      # cada fila vuelve a sumar 1
+bf(dlr ~ 0 + partido + repeticion + (0 + partido || codigo_ccaa),
+   sigma ~ 0 + celda_sigma)
 ```
 
-## El reparto provincial
+La cobertura sube a **`r pct_es(cob_prov("shock brms (draws)"), 0)`**, calculada con las mismas elecciones que calibran los efectos.
 
-Las encuestas dan % regional. D'Hondt se aplica **por provincia**. Hipótesis
-de trabajo: el reparto territorial de 2026 se parece al de 2022.
+Sin la transición probada, la cobertura no cambia (*leave-one-transition-out*).
 
-::: {.fragment}
-**Ejemplo — Almería:** Vox sacó allí el doble que su media regional en 2022.
-Asumimos que ese diferencial se mantiene, pero lo perturbamos con
-incertidumbre.
-:::
-
-::: {.center-text style="font-size: 1.15em; margin-top: 1em;"}
-`% provincia = % regional × (ratio provincia 2022 / media regional 2022)`
-
-*perturbado con una Dirichlet*
-:::
-
-## `sim_escanos_draw()` paso a paso
-
-*(Opcional — solo si sobra tiempo)* · Ejemplo de juguete: 2 partidos, 2 provincias.
-
-```{r}
-#| echo: true
-draw_vec      <- c(A = 0.52, B = 0.48)  # posterior regional
-regional_2022 <- c(A = 50,   B = 50)    # referencia regional
-prov_2022     <- c(A = 60,   B = 40)    # Norte 2022: A ganó
-
-ratio <- (prov_2022 / 100) / (regional_2022 / 100)
-raw   <- draw_vec * ratio
-norm  <- raw / sum(raw)
-round(norm, 3)
+```{r, child=if (estim) "_provincial.qmd"}
 ```
 
-En Norte, A pasa de 52% regional a **`r round(100 * norm["A"], 1)`%** provincial:
-el ratio 2022 (60/50) amplifica el resultado regional en su feudo.
+## Las candidaturas de cada provincia
 
-## Coste computacional
+Registradas en octubre: `simular(listas = "mapa")` aplica una regla por provincia.
 
-*(Opcional — solo si sobra tiempo)*
+| Regla | Provincias | Ejemplo |
+|---|---:|---|
+| Listas separadas | `r n_regla("separadas")` | La mayoría |
+| Con Adelante Andalucía | `r n_regla("con_aa")` | Andalucía |
+| Lista unida | `r n_regla("unida")` | Canarias, C. Valenciana |
+| Sin Podemos | `r n_regla("sin_podemos")` | Cataluña |
+| Sin Frente Amplio | `r n_regla("sin_fa")` | Teruel |
 
-12000 draws × 8 provincias = 96000 repartos D'Hondt.
-
-```{r}
-#| echo: true
-#| eval: false
-plan(multisession, workers = parallel::detectCores() - 1)
-
-escanos_list <- future_map(
-  seq_len(n_draws),
-  \(k) sim_escanos_draw(k, draw_adj[k, ])
-)
-```
-
-Con `furrr` en paralelo, unos segundos en un portátil normal.
-
-## Dirichlet en acción
-
-```{r}
-leer_fig("fig_dirichlet_box")
-```
+Adelante Andalucía y el trasvase de Podemos en Cataluña son **priors**, no encuestas.
 
 ## D'Hondt
 
 ```{r}
 #| echo: true
 #| eval: false
-dhondt <- function(votos, escanos, threshold = 0.03) {
-  votos[votos / sum(votos) < threshold] <- 0   # barrera del 3%
+dhondt <- function(votos, escanos) {
   resultado <- setNames(integer(length(votos)), names(votos))
   for (i in seq_len(escanos)) {
     ganador <- which.max(votos / (resultado + 1))
@@ -317,72 +256,109 @@ dhondt <- function(votos, escanos, threshold = 0.03) {
 }
 ```
 
-Cociente `votos / (escaños_ya_asignados + 1)`: el partido con el cociente
-más alto se lleva el escaño, ronda a ronda.
+- Antes, cada provincia deja a 0 a quien no llega al **3 %**
+- Ceuta y Melilla eligen 1 escaño: D'Hondt equivale a mayoría simple
 
-## Resultado: escaños
-
-```{r}
-leer_fig("fig_ridges_escanos")
+```{r, child=if (estim) "_resultados.qmd"}
 ```
 
-## Distribución conjunta por bloques
-
-*(Opcional — solo si sobra tiempo)*
+## ¿Y si lo hubiera hecho antes?
 
 ```{r}
-leer_fig("fig_conjunta_bloques")
+#| fig-height: 4.6
+leer_fig("fig_backtest")
 ```
 
-## ¿Qué mayoría?
+Usa una media simple de encuestas: prueba las capas de error y de escaños, no el modelo 1.
 
-```{r}
-leer_fig("fig_mayorias_hist")
-```
-
-## ¿Adelante por delante de Por Andalucía?
-
-*(Opcional — solo si sobra tiempo)*
-
-Las encuestas daban a Por Andalucía por delante. Pero la incertidumbre
-provincial deja una probabilidad nada desdeñable de sorpaso:
-
-::: {.center-text style="font-size: 1.3em; margin-top: 0.5em;"}
-**P(Adelante > Por Andalucía) = `r scales::percent(p_aa_gana, accuracy = 0.1)`**
-:::
-
-## Validación 17-M
-
-```{r}
-leer_fig("fig_heatmap_ppvox")
-```
-
-::: {.fragment .center-text style="font-size: 1.1em; margin-top: 0.3em;"}
-No acerté el número exacto — acerté la región de plausibilidad.
-:::
-
-## Limitaciones y cierre
+## Limitaciones
 
 ::: {.callout}
-**Según Virgilio Gómez Rubio**: lo correcto sería meter todas las fuentes de
-incertidumbre en un único modelo bayesiano, y sumar el error histórico en
-escala logit en vez de aditivamente en proporciones.
+**Según Virgilio Gómez Rubio**: lo correcto sería meter toda la incertidumbre en un único modelo. Lo he intentado en el post [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian).
 :::
 
-::: {.incremental style="margin-top: 1em;"}
-- Hipótesis fuerte: el reparto provincial de 2026 se parece al de 2022
-- Matriz de correlación del error histórico, fijada a criterio experto
-- No sabemos qué hipótesis de abstención usa cada encuestadora
+::: {.incremental style="margin-top: 0.8em; font-size: 0.85em;"}
+- El modelo estima la **media de las encuestadoras**, no el resultado
+- No calibra el error por casa, y el error agregado sale de 5 elecciones
+- El reparto provincial hereda el 23J
+- No sabemos qué participación supone cada encuestadora
 :::
 
-::: {.center-text style="margin-top: 2em; font-size: 1.2em;"}
-**Gracias**
+## Gracias
+
+::: {.center-text style="margin-top: 1.5em;"}
+Una foto de las encuestas, no una predicción del domingo.
 
 `github.com/joscani/bayesian-metaanalisis`
 
-::: {style="font-size: 0.55em; margin-top: 1em; color: #666;"}
-Posts originales en *Muestrear no es pecado*:
-[Meta-análisis de encuestas](https://muestrear-no-es-pecado.es/2026/05/meta-analisis-andalucia) ·
-[Escaños, Bayesian way](https://muestrear-no-es-pecado.es/2026/05/escanos_a_lo_bayesiano)
+::: {style="font-size: 0.6em; margin-top: 1.2em; color: #666;"}
+*Muestrear no es pecado*:
+[Voto](https://muestrear-no-es-pecado.es/2026/10/meta-analisis-generales-jlcr) ·
+[Escaños](https://muestrear-no-es-pecado.es/2026/10/meta-analisis-generales-escanos-jlcr) ·
+[Candidaturas](https://muestrear-no-es-pecado.es/2026/10/frente_amplio_y_adelante_andalucia/frente_amplio_y_adelante_andalucia)
+
+[Las slides de Andalucía](https://joscani.github.io/bayesian-metaanalisis/andalucia/)
 :::
 :::
+
+# Material extra {.center-text}
+
+## Lección de brms: `re_formula`
+
+En brms, intercepto y efectos aleatorios comparten un modo común. Solo se cancela con **todos** los términos.
+
+```{r}
+#| echo: true
+#| eval: false
+casas <- unique(modelo$data$encuestadora)
+acum <- 0
+for (cs in casas) {
+  # re_formula = NULL, el valor por defecto
+  acum <- acum + posterior_epred(
+    modelo, newdata = tibble(time = t_e, n = 1, encuestadora = cs))
+}
+epred <- acum / length(casas)  # media entre casas, draw a draw
+```
+
+- `re_formula = NA` quita todos los efectos y ensancha el posterior
+- Una fórmula parcial deja fuera lo que no aparezca en ella
+
+## Priors
+
+Los priors por defecto de `brms` en multinomial son **impropios**. Los sustituyo por priors propios en log-odds.
+
+```{r}
+#| echo: true
+#| eval: false
+mutate(prior = case_when(
+  class == "b"         ~ "normal(0, 2)",
+  class == "Intercept" ~ "normal(0, 2)",
+  class == "sd"        ~ "exponential(1)",
+  TRUE                 ~ prior
+))
+```
+
+## Diagnósticos {.smaller}
+
+```{r}
+tibble(
+  Modelo = c("Modelo 1", "Modelo 2"),
+  `Rhat máximo` = num_es(c(diagnosticos$grande$rhat_max, diagnosticos$bloque$rhat_max), 3),
+  `ESS mínimo` = num_es(c(diagnosticos$grande$ess_min, diagnosticos$bloque$ess_min), 0),
+  Divergentes = c(diagnosticos$grande$n_divergentes, diagnosticos$bloque$n_divergentes),
+  Muestras = num_es(c(diagnosticos$grande$n_transiciones, diagnosticos$bloque$n_transiciones), 0)
+) |>
+  knitr::kable(align = "lrrrr")
+```
+
+ESS mínimo: el menor de `Bulk_ESS` y `Tail_ESS`, en efectos fijos y desviaciones de casa.
+
+```{r, child=if (estim) "_extra_estimacion.qmd"}
+```
+
+## Validación real: Andalucía, 17-M
+
+```{r}
+#| fig-height: 5
+leer_fig("fig_heatmap_andalucia")
+```

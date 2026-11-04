@@ -1,0 +1,17 @@
+## Resultado: las candidaturas mayores
+
+```{r}
+leer_fig("fig_ridges_grandes")
+```
+
+## Resultado: el resto
+
+```{r}
+leer_fig("fig_ridges_resto")
+```
+
+## ¿Qué mayoría?
+
+```{r}
+leer_fig("fig_mayorias_hist")
+```

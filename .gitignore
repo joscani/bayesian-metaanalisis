@@ -1,4 +1,4 @@
-# Modelos brms/Stan grandes (decisión aplazada, ver PLAN.md > "El modelo en git")
+# Fits de brms: se regeneran con R/01_exportar_desde_blog.R
 models/*.rds
 models/*.exe
 

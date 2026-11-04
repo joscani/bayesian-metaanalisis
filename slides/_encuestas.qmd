@@ -1,0 +1,5 @@
+## Las encuestas
+
+```{r}
+leer_fig("fig_encuestas_tiempo")
+```

@@ -1,64 +1,69 @@
-## Constantes y helpers compartidos por los scripts de R/ y por slides/index.qmd
-## Consolida lo que en los posts originales del blog estaba duplicado entre
-## meta-analisis-andalucia.qmd y escanos_a_lo_bayesiano.qmd.
+## Constantes y helpers compartidos por R/02_figuras.R y slides/index.qmd.
+## Paleta y referencias de blog_quarto/2026/10 (posts de generales y escenario mapa).
 
 library(here)
 
-partidos <- c("pp", "psoe", "vox", "por_andalucia", "adelante", "resto")
+fecha_elecciones <- as.Date("2026-11-29")
+mayoria_absoluta <- 176
 
+# nombre de cada familia en las slides. En el escenario mapa, la familia SUMAR
+# es el Frente Amplio
 nombres_partido <- c(
-  pp_esc            = "PP",
-  psoe_esc          = "PSOE-A",
-  vox_esc           = "Vox",
-  por_andalucia_esc = "Por Andalucía",
-  adelante_esc      = "Adelante A.",
-  resto_esc         = "Otros"
-)
-
-orden_partidos <- c("PP", "PSOE-A", "Vox", "Por Andalucía", "Adelante A.", "Otros")
-niveles_ridge  <- rev(orden_partidos)
-
-colores <- c(
-  "pp"            = "#005999",
-  "psoe"          = "#FF0126",
-  "vox"           = "#51962A",
-  "por_andalucia" = "#E51C55",
-  "adelante"      = "#8C66F1",
-  "resto"         = "grey"
+  PP = "PP",
+  PSOE = "PSOE",
+  VOX = "VOX",
+  SUMAR = "Frente Amplio",
+  PODEMOS = "Podemos",
+  AA = "Adelante A.",
+  SALF = "SALF",
+  ERC = "ERC",
+  Junts = "Junts",
+  `EH Bildu` = "EH Bildu",
+  PNV = "PNV",
+  BNG = "BNG",
+  CC = "CC",
+  UPN = "UPN"
 )
 
 colores_esc <- c(
-  "PP"             = "#005999",
-  "PSOE-A"         = "#FF0126",
-  "Vox"            = "#51962A",
-  "Por Andalucía"  = "#E51C55",
-  "Adelante A."    = "#8C66F1",
-  "Otros"          = "#aaaaaa"
+  "PP" = "#005999",
+  "PSOE" = "#FF0126",
+  "VOX" = "#51962A",
+  "Frente Amplio" = "#A00B85",
+  "Podemos" = "#6F2C91",
+  "Adelante A." = "#8C66F1",
+  "SALF" = "#00C3B6",
+  "ERC" = "#F5A21D",
+  "Junts" = "#00C2B4",
+  "EH Bildu" = "#00A56D",
+  "PNV" = "#008141",
+  "BNG" = "#7F9CC4",
+  "CC" = "#D44A20",
+  "UPN" = "#1B4A9B",
+  "Bloque" = "grey50"
+)
+
+# escaños oficiales del 23J (blog: meta-analisis-generales-escanos-jlcr.qmd:744).
+# Sumar incluía a Podemos. Adelante A., Podemos y SALF no tienen referencia
+escanos_23j <- c(
+  "PP" = 137,
+  "PSOE" = 121,
+  "VOX" = 33,
+  "Frente Amplio" = 31,
+  "ERC" = 7,
+  "Junts" = 7,
+  "EH Bildu" = 6,
+  "PNV" = 5,
+  "BNG" = 1,
+  "CC" = 1,
+  "UPN" = 1
 )
 
 col_mayoria <- c(
-  "Izquierda"   = "#cc3333",
+  "Investidura" = "#cc3333",
   "Sin mayoría" = "#aaaaaa",
-  "PP + Vox"    = "#7ab8d9",
-  "PP solo"     = "#005999"
-)
-
-fecha_elecciones <- lubridate::ymd("2026-05-17")
-
-escanos_prov <- tibble::tibble(
-  provincia = c("Sevilla", "Málaga", "Cádiz", "Granada",
-                "Almería", "Córdoba", "Huelva", "Jaén"),
-  escanos   = c(18, 17, 15, 13, 12, 12, 11, 11)
-)
-
-# Media regional 2022 (denominador del ratio provincial en el reparto Dirichlet)
-regional_2022 <- c(
-  pp            = 43.10,
-  psoe          = 24.10,
-  vox           = 13.46,
-  por_andalucia =  7.68,
-  adelante      =  4.58,
-  resto         =  7.08
+  "PP + VOX" = "#7ab8d9",
+  "PP solo" = "#005999"
 )
 
 # Tema ggplot para proyección: los posts del blog usan base_size 11-12,
@@ -66,41 +71,29 @@ regional_2022 <- c(
 theme_slides <- function(base_size = 18) {
   ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(
-      plot.title         = ggplot2::element_text(face = "bold", size = ggplot2::rel(1.05)),
-      plot.subtitle      = ggplot2::element_text(color = "grey45", size = ggplot2::rel(0.75)),
-      panel.grid.minor   = ggplot2::element_blank(),
-      axis.ticks         = ggplot2::element_blank()
+      plot.title = ggplot2::element_text(face = "bold", size = ggplot2::rel(1.05)),
+      plot.subtitle = ggplot2::element_text(color = "grey45", size = ggplot2::rel(0.75)),
+      panel.grid.minor = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank()
     )
 }
 
-# D'Hondt con barrera del 3%. Corazón del reparto provincial (escanos_a_lo_bayesiano.qmd L400-437).
-dhondt <- function(votos, escanos, threshold = 0.03) {
-  if (is.null(names(votos))) {
-    stop("El vector 'votos' debe tener nombres de partidos.")
-  }
-
-  votos <- pmax(votos, 0)
-  total_validos <- sum(votos)
-
-  if (total_validos <= 0) {
-    return(setNames(rep(0L, length(votos)), names(votos)))
-  }
-
-  pasan_umbral <- votos / total_validos >= threshold
-  votos_filtrados <- votos
-  votos_filtrados[!pasan_umbral] <- 0
-
-  if (sum(votos_filtrados) <= 0) {
-    return(setNames(rep(0L, length(votos)), names(votos)))
-  }
-
-  resultado <- setNames(integer(length(votos_filtrados)), names(votos_filtrados))
-
-  for (i in seq_len(escanos)) {
-    cocientes <- votos_filtrados / (resultado + 1)
-    ganador <- which.max(cocientes)
-    resultado[ganador] <- resultado[ganador] + 1L
-  }
-
-  resultado
+# media de escaños por partido, redondeada por resto mayor para que sume 350
+# (misma regla que escanos_resto_mayor() de simular_escanos.R)
+medias_resto_mayor <- function(draws) {
+  m <- as.matrix(draws[, setdiff(names(draws), ".draw")])
+  medias <- colMeans(m)
+  base <- floor(medias)
+  faltan <- round(sum(medias)) - sum(base)
+  extra <- rank(-(medias - base), ties.method = "first") <= faltan
+  tibble::tibble(
+    familia = names(medias),
+    media = unname(medias),
+    etiqueta = unname(base + extra)
+  )
 }
+
+num_es <- function(x, d = 1) {
+  format(round(x, d), decimal.mark = ",", big.mark = ".", nsmall = d, trim = TRUE)
+}
+pct_es <- function(p, d = 1) paste0(num_es(100 * p, d), " %")
