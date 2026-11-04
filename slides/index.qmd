@@ -289,7 +289,11 @@ Sin la transición probada, la cobertura no cambia (*leave-one-transition-out*).
 - **`|` frente a `||`:** con `|`, brms estima las correlaciones entre los efectos del grupo. Con `||`, los estima independientes.
 - `(0 + partido || codigo_ccaa)` da a cada comunidad una desviación por partido, sin correlaciones. Cada partido tiene su propia desviación entre comunidades: su τ_c.
 - ¿Por qué no `(1 | partido:ccaa)`? Porque daría una única τ_c para todos los partidos, y VOX se mueve en bloque por comunidad, mientras que el PP se mueve más provincia a provincia.
-- `sigma ~ 0 + celda_sigma` es un modelo distribucional: la desviación residual también tiene su regresión. Es la τ_p, por partido y tipo de transición. brms modela `sigma` en escala logarítmica.
+- `sigma ~ 0 + celda_sigma` es un modelo distribucional: la desviación residual también tiene su regresión. brms modela `sigma` en escala logarítmica.
+- **`celda_sigma`** combina partido y tipo de transición: `PP × fresca`, `PP × repetición`, `VOX × fresca`, etc. Cada celda tiene su propia desviación residual: su τ_p.
+- **Transición** es el paso de una elección a la siguiente. Es *fresca* si hay tiempo real entre ambas, como del 10N al 23J. Es *repetición* si se repite a los pocos meses, como del 20D al 26J.
+- **Por qué hace falta:** en las repeticiones el reparto provincial apenas cambia. Con una sola `sigma`, esas elecciones reducirían el ruido estimado para el 29N. τ_p del PP: 0,173 en frescas y 0,050 en repeticiones. τ_p de VOX: 0,199 y 0,063.
+- El 29N es una transición fresca: la simulación usa las τ_p de esas celdas.
 - En la simulación, cada draw multiplica el ratio por exp(η + ε) y se renormaliza, para no cambiar el voto nacional.
 - La cobertura de esta slide es *in-sample*. El *leave-one-transition-out* reestima sin la transición probada y la cobertura no se mueve.
 :::
