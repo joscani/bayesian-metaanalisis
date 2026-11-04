@@ -46,6 +46,19 @@ copia aquí: `R/01_exportar_desde_blog.R` llama al código de
 
 Condición previa: tener `blog_quarto` y este repo en la misma carpeta.
 
+Ejecuta, desde la raíz de este repo:
+
+```bash
+scripts/actualizar.sh
+```
+
+El script descarga encuestas y sale si no hay nuevas. Si las hay, reajusta y
+comprueba convergencia con `R/04_comprobar.R`. Solo publica si todo pasa.
+Con `--sin-publicar` no confirma ni publica nada. Los datos se congelan el
+22 de noviembre.
+
+Los pasos, por separado:
+
 1. Actualiza los CSV, desde la raíz del blog:
 
    ```bash

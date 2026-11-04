@@ -125,6 +125,32 @@ La mayoría de encuestas no publica PNV, BNG o Junts. Sin ellos no hay reparto p
 - En la simulación, el segundo reparte lo que el primero asigna al BLOQUE
 :::
 
+## De porcentajes a `cell_counts`
+
+Cada encuesta se convierte en votos: porcentaje publicado × tamaño muestral. Cifras inventadas:
+
+```{r}
+#| echo: true
+pct <- rbind(
+  A = c(PP = 32, PSOE = 27, VOX = 19, SUMAR = 6, PODEMOS = 3, SALF = 2, BLOQUE = 11),
+  B = c(PP = 30, PSOE = 28, VOX = 20, SUMAR = 7, PODEMOS = 2, SALF = 2, BLOQUE = 11)
+)
+n <- c(A = 1000, B = 3000)
+
+cell_counts <- round(pct / 100 * n)
+cell_counts
+```
+
+Cada fila es una encuesta. `trials(n)` es la suma de su fila: la encuesta B pesa más.
+
+::: {.notes}
+- `cell_counts` es una matriz dentro del data frame, con una columna por categoría.
+- `n` es la suma de la fila, no el tamaño publicado: el redondeo puede diferir en 1 voto.
+- En el modelo 2, las columnas son las subceldas del BLOQUE y `trials(bloque)` es su suma.
+- Tratar los porcentajes publicados como conteos es una simplificación: esos porcentajes ya llevan la cocina de cada casa.
+- El detalle está en el [post de voto](https://muestrear-no-es-pecado.es/2026/10/meta-analisis-generales-jlcr).
+:::
+
 ## Modelo 1
 
 Modelo **multinomial bayesiano** con `brms`: cada encuesta aporta un vector de votos.

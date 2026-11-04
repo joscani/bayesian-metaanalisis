@@ -4,13 +4,21 @@
 #
 #   scripts/publicar.sh            # renderiza, copia, confirma y sube
 #   scripts/publicar.sh --sin-subir  # hace lo mismo, sin git push
+#   scripts/publicar.sh --sin-render # reintenta con el último render
 #
 # No uses `quarto publish gh-pages`: su código ejecuta `git rm -r .` en la rama.
 set -euo pipefail
 
 repo="$(git -C "$(dirname "$0")/.." rev-parse --show-toplevel)"
 subir=true
-[[ "${1:-}" == "--sin-subir" ]] && subir=false
+renderizar=true
+for arg in "$@"; do
+  case "$arg" in
+    --sin-subir) subir=false ;;
+    --sin-render) renderizar=false ;;
+    *) echo "Argumento desconocido: $arg" >&2; exit 2 ;;
+  esac
+done
 
 fecha_hoy="$(date +%F)"
 if [[ "$fecha_hoy" > "2026-11-23" && "$fecha_hoy" < "2026-11-29" ]]; then
@@ -20,8 +28,10 @@ fi
 
 cd "$repo"
 # sin restos de renders anteriores: index_files se copia entero a la rama
-rm -rf slides/index_files
-quarto render slides/index.qmd
+if $renderizar; then
+  rm -rf slides/index_files
+  quarto render slides/index.qmd
+fi
 
 worktree="$(mktemp -d)"
 trap 'git -C "$repo" worktree remove --force "$worktree"' EXIT
