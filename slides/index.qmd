@@ -147,6 +147,16 @@ brm(form, dat, multinomial(),
 - En Andalucía era `(time | empresa)`: con pocas encuestas por casa, no se aprende
 :::
 
+::: {.notes}
+- `cell_counts` es una matriz con una columna por categoría: los votos de cada encuesta, porcentaje publicado por tamaño muestral.
+- `trials(n)` indica el total de cada fila. Así, una encuesta con más muestra pesa más.
+- El multinomial usa el PP como referencia: cada categoría se modela en log-odds frente al PP, que no tiene ecuación propia.
+- `time` da una pendiente por categoría, común a todas las casas.
+- `(1 | encuestadora)` da un intercepto por casa y por categoría. Las casas con pocas encuestas se encogen hacia 0.
+- Los efectos casa están centrados en 0: el modelo estima la media de las encuestadoras, no el resultado.
+- `init = 0.1`, `adapt_delta = 0.95` y `max_treedepth = 12` hacen el muestreo más prudente, a cambio de más tiempo.
+:::
+
 ## Modelo 2
 
 Reparte el BLOQUE entre Junts, ERC, PNV, EH Bildu, BNG, CC, UPN y RESTO.
@@ -169,6 +179,14 @@ brm(form, dat, multinomial(),
 - Ventana larga, desde junio de 2025: hay pocas encuestas con regionales
 :::
 
+::: {.notes}
+- `trials(bloque)` es la diferencia clave: el total son los votos del BLOQUE. Una encuesta con n = 1.000 y BLOQUE del 11 % entra con 110 votos.
+- El modelo solo aprende el reparto interno. El tamaño del BLOQUE lo da el modelo 1.
+- La referencia es Junts: los coeficientes son log-odds de cada subcelda frente a Junts.
+- No lleva efecto casa porque los niveles están muy desbalanceados: ElectoPanel domina el peso.
+- ElectoPanel está en este modelo y no en el modelo 1. Aquí hace falta porque es de las pocas casas que publican los regionales.
+:::
+
 ## Cómo encajan los dos modelos
 
 Cada draw del modelo 1 da el tamaño; cada draw del modelo 2, la composición. Ejemplo de juguete:
@@ -185,6 +203,13 @@ d1 <- c(PP = 32.6, PSOE = 27.1, VOX = 19.2, FA = 5.2,
 draw <- c(d1[1:6], d1[["BLOQUE"]] * c2)
 round(draw[c("PP", "ERC", "PNV")], 1); sum(draw)
 ```
+
+::: {.notes}
+- Las cifras son inventadas, solo para enseñar la mecánica.
+- `d1[["BLOQUE"]] * c2` reparte el BLOQUE y el vector vuelve a sumar 100.
+- Supuesto: tamaño y composición del BLOQUE no están correlacionados, porque los draws de cada modelo se emparejan por índice.
+- Un único modelo de 14 categorías podría capturar esa relación, pero pocas encuestas publican todas las categorías.
+:::
 
 ```{r, child=if (estim) "_ppc.qmd"}
 ```
@@ -211,11 +236,20 @@ round(draw[c("PP", "ERC", "PNV")], 1); sum(draw)
 ::: {.incremental}
 - Las encuestas infraestiman al PSOE 1,3 puntos; corrijo la mitad, **+`r num_es(capa_error$mu[["PSOE"]], 1)`**
 - Desviación típica entre 1,3 y 2,6 puntos según el partido
-- **ρ(PP, VOX) = +`r num_es(capa_error$cor_pp_vox, 1)`**
+- **ρ(PP, VOX) = `r num_neg(capa_error$cor_pp_vox)`**: si se pasan con uno, se quedan cortas con el otro
 :::
 
 ::: {.callout style="margin-top: 1em;"}
-En Andalucía fijé esa correlación a mano en −0,5. Los datos dicen lo contrario: cuando las encuestas se pasan con el PP, también se pasan con VOX.
+Fallan más al **repartir** entre los dos que con la suma. Estimada en el modelo [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian) con 44 elecciones: IC 90 % [`r num_neg(capa_error$cor_pp_vox_q05)`; `r num_neg(capa_error$cor_pp_vox_q95)`]. Con solo las 3 generales con VOX, el signo sale al revés.
+:::
+
+::: {.notes}
+- El error se suma al posterior en puntos porcentuales, y después el vector se reescala para sumar 100.
+- La media solo se corrige en el PSOE: en los demás partidos el signo cambia según las elecciones incluidas.
+- Corrijo la mitad porque el *leave-one-out* no valida la corrección completa fuera de muestra.
+- La correlación viene de la matriz `Omega` del post full bayesian, en escala logit. Aquí la aplico a un error en puntos: es una aproximación.
+- Las 3 generales con VOX daban +0,92. Con tan pocas elecciones, ese valor es muy inestable.
+- El BLOQUE lleva un shock propio de 1,5 puntos: es un supuesto, no una estimación.
 :::
 
 ## Provincia: la idea
@@ -246,6 +280,17 @@ bf(dlr ~ 0 + partido + repeticion + (0 + partido || codigo_ccaa),
 La cobertura sube a **`r pct_es(cob_prov("shock brms (draws)"), 0)`**, calculada con las mismas elecciones que calibran los efectos.
 
 Sin la transición probada, la cobertura no cambia (*leave-one-transition-out*).
+
+::: {.notes}
+- `dlr` es Δ log r: cuánto cambia el logaritmo del ratio provincial de un partido entre dos elecciones.
+- `0 + partido` quita el intercepto común: cada partido tiene su propia media. `repeticion` marca las elecciones repetidas, donde la geografía apenas cambia.
+- **`|` frente a `||`:** con `|`, brms estima las correlaciones entre los efectos del grupo. Con `||`, los estima independientes.
+- `(0 + partido || codigo_ccaa)` da a cada comunidad una desviación por partido, sin correlaciones. Cada partido tiene su propia desviación entre comunidades: su τ_c.
+- ¿Por qué no `(1 | partido:ccaa)`? Porque daría una única τ_c para todos los partidos, y VOX se mueve en bloque por comunidad, mientras que el PP se mueve más provincia a provincia.
+- `sigma ~ 0 + celda_sigma` es un modelo distribucional: la desviación residual también tiene su regresión. Es la τ_p, por partido y tipo de transición. brms modela `sigma` en escala logarítmica.
+- En la simulación, cada draw multiplica el ratio por exp(η + ε) y se renormaliza, para no cambiar el voto nacional.
+- La cobertura de esta slide es *in-sample*. El *leave-one-transition-out* reestima sin la transición probada y la cobertura no se mueve.
+:::
 
 ```{r, child=if (estim) "_provincial.qmd"}
 ```
@@ -347,6 +392,15 @@ epred <- acum / length(casas)  # media entre casas, draw a draw
 - `re_formula = NA` quita todos los efectos y ensancha el posterior
 - Una fórmula parcial deja fuera lo que no aparezca en ella
 
+::: {.notes}
+- `re_formula` no añade términos: **sustituye** la lista de efectos aleatorios del modelo.
+- `NULL`, el valor por defecto, mantiene todos. `NA` los quita todos. Una fórmula parcial deja fuera lo que no aparezca.
+- Con `NULL`, `newdata` necesita una casa. Por eso calculo un epred por casa y promedio draw a draw.
+- Modo común: sumar una constante al intercepto y restarla a todos los efectos casa da la misma predicción. Solo con todos los términos ese modo se cancela. Sin ellos, su varianza se queda en la predicción.
+- En el MRP multiencuesta, el error ensanchaba los intervalos de escaños 2-3 veces. En este modelo el efecto es mucho menor: la sd del voto bajaba entre un 4 % y un 24 %, y los escaños no cambiaban (fits del 28 oct).
+- La media es sobre las casas observadas: es la "media de las encuestadoras" de este conjunto.
+:::
+
 ## Priors
 
 Los priors por defecto de `brms` en multinomial son **impropios**. Los sustituyo por priors propios en log-odds.
@@ -361,6 +415,13 @@ mutate(prior = case_when(
   TRUE                 ~ prior
 ))
 ```
+
+::: {.notes}
+- Impropio significa plano: no integra a 1. Por eso no se puede muestrear solo del prior con `sample_prior = "only"`.
+- `normal(0, 2)` en log-odds es muy poco informativo: un intercepto de 2 es una categoría unas 7 veces (e²) mayor que el PP.
+- `exponential(1)` obliga a las desviaciones a ser positivas. Acumula probabilidad cerca de 0 y deja una cola moderada.
+- Los mismos priors valen para los dos modelos.
+:::
 
 ## Diagnósticos {.smaller}
 
@@ -377,6 +438,13 @@ tibble(
 
 ESS mínimo: el menor de `Bulk_ESS` y `Tail_ESS`, en efectos fijos y desviaciones de casa.
 
+::: {.notes}
+- **Rhat** compara la variación dentro de cada cadena y entre cadenas. Lo buscado es un valor cercano a 1; la referencia habitual es < 1,01.
+- **Bulk_ESS** es el tamaño de muestra efectivo para el centro de la distribución. **Tail_ESS**, para las colas, que son las que usan los intervalos.
+- **Divergentes:** transiciones donde el muestreador falla por la geometría del posterior. Con muchas, no hay que fiarse del ajuste.
+- **Muestras:** 4 cadenas × (4.000 − 1.000 de warmup) = 12.000.
+:::
+
 ```{r, child=if (estim) "_extra_estimacion.qmd"}
 ```
 
@@ -387,3 +455,11 @@ ESS mínimo: el menor de `Bulk_ESS` y `Tail_ESS`, en efectos fijos y desviacione
 #| fig-height: 5
 leer_fig("fig_heatmap_andalucia")
 ```
+
+::: {.notes}
+- Es la única validación con una elección real fuera de muestra, y usa la versión anterior del flujo.
+- Aquella versión era distinta: `(time | empresa)`, empresa nueva en la predicción, correlaciones fijadas a mano y reparto con Dirichlet.
+- No acerté el número exacto: el resultado cayó dentro de la región de plausibilidad.
+- Es un solo caso: no demuestra que el flujo esté calibrado.
+:::
+

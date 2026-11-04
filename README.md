@@ -33,10 +33,14 @@ copia aquí: `R/01_exportar_desde_blog.R` llama al código de
 [`blog_quarto/2026/10`](https://github.com/joscani/blog_quarto/tree/master/2026/10).
 `outputs/procedencia.rds` guarda el commit del blog y la fecha de la última encuesta.
 
-**Diferencia con el blog:** el blog predice con `re_formula = NA`
-(`simular_escanos.R`). Aquí se usa `re_formula = NULL`, con un epred por casa y
-la media entre casas. El motivo está en `2026/11/mrp-multiencuesta/GUIA.md`,
-sección "Lección de brms".
+**Dos diferencias con `simular_escanos.R` del blog:**
+
+- **Predicción:** el blog usa `re_formula = NA`. Aquí se usa `re_formula = NULL`,
+  con un epred por casa y la media entre casas. El motivo está en
+  `2026/11/mrp-multiencuesta/GUIA.md`, sección "Lección de brms".
+- **Correlación PP-VOX de la capa de error:** el blog usa +0,5, a partir de las 3
+  generales con VOX. Aquí se usa la mediana de `Omega` del post full bayesian
+  (`2026/10/full-bayesian/conjunto_parametros.csv`), estimada con 44 elecciones.
 
 ## Actualizar con encuestas nuevas
 

@@ -6,6 +6,13 @@ Voto publicado en %, ordenado de la más reciente a la más antigua. SUMAR corre
 tabla_encuestas(leer("tabla_encuestas_m1"))
 ```
 
+::: {.notes}
+- Es la tabla de entrada del modelo: el nombre de cada casa enlaza a la fuente.
+- Fuera quedan el CIS, ElectoPanel y las encuestas sin tamaño muestral publicado.
+- `SUMAR` es la columna de las fuentes. En esta charla, esa familia corresponde a Frente Amplio.
+- El buscador y las columnas ordenables permiten responder preguntas en directo.
+:::
+
 ## Encuestas del modelo 2 {.smaller}
 
 Voto publicado en %, sobre la muestra completa. Solo encuestas con todos los regionales.
@@ -14,6 +21,12 @@ Voto publicado en %, sobre la muestra completa. Solo encuestas con todos los reg
 tabla_encuestas(leer("tabla_encuestas_m2"))
 ```
 
+::: {.notes}
+- Solo entran encuestas con los 7 regionales. Muchas vienen de ElectoPanel, que aquí sí está.
+- La ventana empieza en junio de 2025, frente a julio de 2026 en el modelo 1.
+- Los porcentajes son sobre la muestra completa. `BLOQUE` es su suma; el modelo convierte esos valores en votos dentro del BLOQUE.
+:::
+
 ## Efectos casa
 
 ```{r}
@@ -21,6 +34,14 @@ tabla_encuestas(leer("tabla_encuestas_m2"))
 #| fig-height: 5
 leer_fig("fig_ranef_vox")
 ```
+
+::: {.notes}
+- Cada punto es la desviación de una casa en el log-odds de VOX frente al PP, respecto a la media de las casas.
+- Positivo: esa casa da a VOX más voto frente al PP que la media. Es un sesgo relativo a las demás, no frente al resultado.
+- Este gráfico usa IC 95 %, la salida por defecto de `ranef()`. El resto de la charla usa IC 90 %.
+- Las casas con pocas encuestas tienen intervalos más anchos y se encogen hacia 0.
+- El efecto es constante en toda la ventana: no hay deriva por casa.
+:::
 
 ## ¿De dónde sale la incertidumbre? {.smaller}
 
@@ -38,6 +59,13 @@ leer("descomposicion") |>
 ```
 
 4.000 simulaciones por fila, con las candidaturas de cada provincia.
+
+::: {.notes}
+- Cada fila enciende capas de `simular()`: `con_error` para el error histórico y `con_ruido` para el shock provincial.
+- El shock independiente se cancela en parte al sumar 52 provincias. Por eso mueve mucho cada provincia y poco el total nacional.
+- La probabilidad de la última fila difiere algo de la slide "¿Qué mayoría?": aquí son 4.000 simulaciones y allí, 6.000, con otra semilla.
+- Con la correlación PP–VOX negativa, el error en PP y en VOX se compensa en parte al sumarlos.
+:::
 
 ## Candidaturas unidas frente a reales {.smaller}
 
@@ -57,6 +85,13 @@ cand$escanos |>
   )
 ```
 
+::: {.notes}
+- "Unidas" aplica la regla `unida` en las 52 provincias. "Reales" aplica la regla registrada en cada una.
+- En "Unidas", Frente Amplio incluye a Podemos, y por eso Podemos sale con 0 escaños.
+- Adelante Andalucía solo compite en "Reales". Su voto sale de un prior centrado en su resultado de las autonómicas de mayo, no de encuestas de generales.
+- Comparten semilla, modelo y capas: la diferencia es el efecto de la regla provincial.
+:::
+
 ## PP y VOX, conjuntamente
 
 ```{r}
@@ -64,3 +99,11 @@ cand$escanos |>
 #| fig-height: 5
 leer_fig("fig_heatmap_ppvox")
 ```
+
+::: {.notes}
+- Cada celda cuenta las simulaciones con esa combinación de escaños.
+- La línea discontinua marca PP + VOX = 176: por debajo no suman mayoría.
+- Una correlación negativa del error inclina la nube: más PP suele ir con menos VOX. Es el reparto del que hablaba en la slide del error histórico.
+- Lo que muestra es que el error se compensa en la suma, no que PP y VOX se disputen los mismos votantes.
+:::
+

@@ -137,7 +137,7 @@ Título y tema se mantienen; una idea por slide. Los textos de Andalucía se ree
 | 10 | Posterior del día E | Densidades y tabla con IC 90 % |
 | 11 | Transición | "Aquí acaba la mayoría de agregadores…" |
 | 12 | Fuentes de incertidumbre | Modelo, error histórico, provincia, candidaturas |
-| 13 | Error histórico | PSOE +0,7 pp; PP–VOX +0,5, frente al −0,5 fijado en Andalucía |
+| 13 | Error histórico | PSOE +0,7 pp; PP–VOX −0,51, del post full bayesian (44 elecciones) |
 | 14 | Provincia: el fallo | La Dirichlet promete 90 % y cubre 66 % |
 | 15 | Provincia: la solución | Efectos de comunidad y provincia con brms; cobertura nueva |
 | 16 | Mapa de candidaturas | 33 separadas, 8 con AA, 6 unidas, 4 sin Podemos, 1 sin FA |

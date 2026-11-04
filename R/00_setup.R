@@ -97,6 +97,7 @@ num_es <- function(x, d = 1) {
   format(round(x, d), decimal.mark = ",", big.mark = ".", nsmall = d, trim = TRUE)
 }
 pct_es <- function(p, d = 1) paste0(num_es(100 * p, d), " %")
+num_neg <- function(x, d = 2) sub("-", "−", num_es(x, d), fixed = TRUE)
 
 # tabla interactiva de encuestas para las slides. La columna Encuesta ya trae
 # el enlace en HTML, por eso escape = FALSE

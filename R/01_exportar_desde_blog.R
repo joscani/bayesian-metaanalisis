@@ -14,6 +14,10 @@
 # re_formula = NA. Aquí se usa re_formula = NULL con un epred por casa y media
 # entre casas. Ver blog_quarto/2026/11/mrp-multiencuesta/GUIA.md, sección
 # "Lección de brms". La sustitución se hace enmascarando add_epred_draws().
+#
+# Segunda diferencia deliberada: simular_escanos.R usa una correlación PP-VOX de
+# +0,5 en la capa de error, a partir de las 3 generales con VOX. Aquí se usa la
+# mediana de Omega del post full bayesian, estimada con 44 elecciones.
 
 suppressPackageStartupMessages({
   library(purrr)
@@ -88,6 +92,23 @@ add_epred_draws <- function(newdata, object, ndraws = NULL, re_formula = NULL, .
     mutate(.draw = row_number()) |>
     pivot_longer(-.draw, names_to = ".category", values_to = ".epred")
 }
+
+# ---- 2b. correlación PP-VOX de la capa de error --------------------------------
+
+cor_pp_vox_pipeline <- R_error["PP", "VOX"]
+omega_pp_vox <- readr::read_csv(
+  here::here("2026/10/full-bayesian/conjunto_parametros.csv"),
+  show_col_types = FALSE
+) |>
+  filter(parametro == "Omega", partido == "VOX-PP")
+stopifnot(nrow(omega_pp_vox) == 1)
+R_error["PP", "VOX"] <- R_error["VOX", "PP"] <- omega_pp_vox$mediana
+Sigma_error <- outer(error_sigma, error_sigma) * R_error
+stopifnot(all(eigen(Sigma_error[1:4, 1:4])$values > 0))
+log_paso(
+  "2b. correlación PP-VOX: ", round(cor_pp_vox_pipeline, 2), " -> ",
+  round(omega_pp_vox$mediana, 2)
+)
 
 # ---- 3. simulación principal ----------------------------------------------------
 
@@ -260,6 +281,9 @@ saveRDS(
     mu = error_mu,
     sigma = error_sigma,
     cor_pp_vox = R_error["PP", "VOX"],
+    cor_pp_vox_q05 = omega_pp_vox$q05,
+    cor_pp_vox_q95 = omega_pp_vox$q95,
+    cor_pp_vox_pipeline = cor_pp_vox_pipeline,
     sigma_bloque = 1.5
   ),
   ruta_out("capa_error.rds")
