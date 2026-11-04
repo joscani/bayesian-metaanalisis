@@ -136,7 +136,7 @@ voto_draws <- as_tibble(sapply(fams, \(f) 100 * as.numeric(sim$prov_voto[, , f] 
 saveRDS(voto_draws, ruta_out("voto_draws.rds"))
 
 # voto provincial resumido, con el valor del 23J como referencia
-fams_prov <- c("PP", "PSOE", "VOX", "SUMAR")
+fams_prov <- c("PP", "PSOE", "VOX", "SUMAR", "CC")
 prov_resumen <- map_dfr(fams_prov, \(f) {
   m <- sim$prov_voto[, , f] * 100
   tibble(

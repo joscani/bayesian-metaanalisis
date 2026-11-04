@@ -121,12 +121,20 @@ guardar_fig(fig_posterior_dia_e, "fig_posterior_dia_e")
 
 ## ---- 4. Reparto provincial -------------------------------------------------------
 
-provincias_ej <- c("Madrid", "Barcelona", "Sevilla", "Bizkaia", "Almería", "Soria")
+provincias_ej <- c(
+  "Las Palmas", "Santa Cruz de Tenerife",
+  "Madrid", "Barcelona", "Sevilla", "Bizkaia", "Almería", "Soria"
+)
 
 prov_resumen <- readRDS(here("outputs", "prov_resumen.rds")) |>
   filter(provincia %in% provincias_ej) |>
+  # CC solo compite en Canarias
+  filter(partido != "CC" | provincia %in% c("Las Palmas", "Santa Cruz de Tenerife")) |>
   mutate(
-    partido = factor(a_nombre(partido), levels = a_nombre(c("PP", "PSOE", "VOX", "SUMAR"))),
+    # VOX no tuvo lista en Santa Cruz de Tenerife el 23J: la referencia es un
+    # ratio del 10N, no un resultado, y no se dibuja como tal
+    pct_23j = if_else(partido == "VOX" & provincia == "Santa Cruz de Tenerife", NA_real_, pct_23j),
+    partido = factor(a_nombre(partido), levels = a_nombre(c("PP", "PSOE", "VOX", "SUMAR", "CC"))),
     provincia = factor(provincia, levels = rev(provincias_ej))
   )
 stopifnot(n_distinct(prov_resumen$provincia) == length(provincias_ej))
@@ -140,7 +148,8 @@ fig_provincial <- prov_resumen |>
   scale_color_manual(values = colores_esc, guide = "none") +
   labs(
     title = "Voto provincial simulado",
-    subtitle = "Barra fina: IC 90 % · Barra gruesa: IC 50 % · Rombo: resultado del 23J (Sumar con Podemos)",
+    subtitle = "Barra fina: IC 90 % · Barra gruesa: IC 50 % · Rombo: resultado del 23J",
+    caption = "Sumar incluía a Podemos el 23J. VOX no presentó lista en Santa Cruz de Tenerife.",
     x = "Voto (%)",
     y = NULL
   ) +

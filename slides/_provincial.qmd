@@ -4,3 +4,11 @@
 #| label: g-fig-provincial
 leer_fig("fig_provincial")
 ```
+
+::: {.notes}
+- Las dos primeras filas son Canarias. Coalición Canaria solo compite allí, por eso su columna solo tiene esas dos filas.
+- En Canarias, el Frente Amplio va en lista unida con Podemos: es la regla `unida` de la slide de candidaturas.
+- VOX no tuvo lista en Santa Cruz de Tenerife el 23J. Su reparto allí usa el ratio del 10N, y por eso esa celda no lleva rombo.
+- CC sale de la composición del BLOQUE del modelo 2, con el reparto provincial del 23J.
+- Madrid, Barcelona, Sevilla, Bizkaia, Almería y Soria son ejemplos de provincias distintas.
+:::

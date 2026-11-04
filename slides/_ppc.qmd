@@ -12,7 +12,7 @@ leer_fig("fig_ppc_posterior")
 
 ## Posterior del día E {.smaller}
 
-Modelo 1, sin capas de error. Media entre casas, con todos los efectos aleatorios.
+Paso intermedio: modelo 1, aún sin el error histórico, que se añade después. Media entre casas, con todos los efectos aleatorios.
 
 ::: columns
 ::: {.column width="58%"}

@@ -62,6 +62,7 @@ leer("descomposicion") |>
 
 ::: {.notes}
 - Cada fila enciende capas de `simular()`: `con_error` para el error histórico y `con_ruido` para el shock provincial.
+- "Solo posterior" es el paso de la slide "Posterior del día E". Los escaños de los resultados son la última fila: incluyen el error histórico.
 - El shock independiente se cancela en parte al sumar 52 provincias. Por eso mueve mucho cada provincia y poco el total nacional.
 - La probabilidad de la última fila difiere algo de la slide "¿Qué mayoría?": aquí son 4.000 simulaciones y allí, 6.000, con otra semilla.
 - Con la correlación PP–VOX negativa, el error en PP y en VOX se compensa en parte al sumarlos.
