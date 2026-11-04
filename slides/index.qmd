@@ -236,11 +236,13 @@ round(draw[c("PP", "ERC", "PNV")], 1); sum(draw)
 ::: {.incremental}
 - Las encuestas infraestiman al PSOE 1,3 puntos; corrijo la mitad, **+`r num_es(capa_error$mu[["PSOE"]], 1)`**
 - Desviación típica entre 1,3 y 2,6 puntos según el partido
-- **ρ(PP, VOX) = `r num_neg(capa_error$cor_pp_vox)`**: si se pasan con uno, se quedan cortas con el otro
+- **Correlación entre el error con PP y el error con VOX: `r num_neg(capa_error$cor_pp_vox)`**
 :::
 
 ::: {.callout style="margin-top: 1em;"}
-Fallan más al **repartir** entre los dos que con la suma. Estimada en el modelo [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian) con 44 elecciones: IC 90 % [`r num_neg(capa_error$cor_pp_vox_q05)`; `r num_neg(capa_error$cor_pp_vox_q95)`]. Con solo las 3 generales con VOX, el signo sale al revés.
+Esa correlación sale del modelo [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian), con 44 elecciones. Su IC 90 % es [`r num_neg(capa_error$cor_pp_vox_q05)`; `r num_neg(capa_error$cor_pp_vox_q95)`].
+
+Si las encuestas se pasan con uno, se quedan cortas con el otro: fallan más al **repartir** entre PP y VOX que con su suma. Con solo las 3 generales con VOX, el signo sale al revés.
 :::
 
 ::: {.notes}
