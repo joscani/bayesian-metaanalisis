@@ -1,3 +1,19 @@
+## Encuestas del modelo 1 {.smaller}
+
+Voto publicado en %, ordenado de la más reciente a la más antigua. SUMAR corresponde a Frente Amplio.
+
+```{r}
+tabla_encuestas(leer("tabla_encuestas_m1"))
+```
+
+## Encuestas del modelo 2 {.smaller}
+
+Voto publicado en %, sobre la muestra completa. Solo encuestas con todos los regionales.
+
+```{r}
+tabla_encuestas(leer("tabla_encuestas_m2"))
+```
+
 ## Efectos casa
 
 ```{r}

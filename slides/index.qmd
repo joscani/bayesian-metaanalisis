@@ -53,6 +53,7 @@ reglas <- read_csv(
 n_regla <- function(r) reglas$n[reglas$regla == r]
 
 corte <- format(procedencia$ultima_encuesta, "%d/%m/%Y")
+peso_electopanel <- leer("peso_electopanel")
 ```
 
 ## El problema
@@ -120,7 +121,7 @@ La mayoría de encuestas no publica PNV, BNG o Junts. Sin ellos no hay reparto p
 ::: {.incremental}
 - **Modelo 1:** PP, PSOE, VOX, SUMAR, Podemos, SALF y **BLOQUE**
 - **Modelo 2:** cómo se reparte el BLOQUE entre 8 subceldas
-- Cada draw del modelo 1 da el *tamaño*; cada draw del modelo 2, la *composición*
+- En la simulación, el segundo reparte lo que el primero asigna al BLOQUE
 :::
 
 ## Modelo 1
@@ -146,9 +147,31 @@ brm(form, dat, multinomial(),
 - En Andalucía era `(time | empresa)`: con pocas encuestas por casa, no se aprende
 :::
 
-## Modelo 2 y cómo encajan
+## Modelo 2
 
-`trials` son los votos **del BLOQUE**, no la muestra. Ejemplo de juguete:
+Reparte el BLOQUE entre Junts, ERC, PNV, EH Bildu, BNG, CC, UPN y RESTO.
+
+```{r}
+#| echo: true
+#| eval: false
+#| label: snippet-modelo-2
+form <- brmsformula(cell_counts | trials(bloque) ~ time)
+
+brm(form, dat, multinomial(),
+    prior = priors_multinomial(form, dat),
+    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
+    control = list(adapt_delta = 0.95))
+```
+
+::: {.incremental}
+- `trials(bloque)`: los votos **del BLOQUE**, no la muestra
+- Sin efecto casa: ElectoPanel pesa el `r pct_es(peso_electopanel, 0)` de los votos del BLOQUE
+- Ventana larga, desde junio de 2025: hay pocas encuestas con regionales
+:::
+
+## Cómo encajan los dos modelos
+
+Cada draw del modelo 1 da el tamaño; cada draw del modelo 2, la composición. Ejemplo de juguete:
 
 ```{r}
 #| echo: true

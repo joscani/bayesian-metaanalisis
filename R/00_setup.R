@@ -97,3 +97,26 @@ num_es <- function(x, d = 1) {
   format(round(x, d), decimal.mark = ",", big.mark = ".", nsmall = d, trim = TRUE)
 }
 pct_es <- function(p, d = 1) paste0(num_es(100 * p, d), " %")
+
+# tabla interactiva de encuestas para las slides. La columna Encuesta ya trae
+# el enlace en HTML, por eso escape = FALSE
+tabla_encuestas <- function(d) {
+  DT::datatable(
+    d,
+    escape = FALSE,
+    rownames = FALSE,
+    class = "compact stripe",
+    options = list(
+      pageLength = 6,
+      lengthChange = FALSE,
+      scrollX = TRUE,
+      language = list(
+        search = "Buscar:",
+        info = "_START_-_END_ de _TOTAL_",
+        infoFiltered = "(de _MAX_)",
+        zeroRecords = "Sin resultados",
+        paginate = list(previous = "Anterior", `next` = "Siguiente")
+      )
+    )
+  )
+}

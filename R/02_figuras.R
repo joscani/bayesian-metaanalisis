@@ -458,6 +458,50 @@ fig_ranef_vox <- efectos_vox |>
 
 guardar_fig(fig_ranef_vox, "fig_ranef_vox")
 
+## ---- 10. Tablas de encuestas -----------------------------------------------------
+
+# mismos filtros que prep_grande() y prep_bloque() de blog_quarto/2026/10/ajustar_meta.R
+enlace_html <- function(casa, enlace) sprintf('<a href="%s" target="_blank">%s</a>', enlace, casa)
+
+g <- read_csv(here("data", "encuestas_meta_grande_sep.csv"), show_col_types = FALSE) |>
+  filter(!is.na(muestra), !encuestadora %in% c("CIS", "ElectoPanel")) |>
+  distinct(encuestadora, campo, enlace, categoria, .keep_all = TRUE)
+tabla_m1 <- g |>
+  select(encuestadora, campo, fecha, muestra, enlace, categoria, pct) |>
+  pivot_wider(names_from = categoria, values_from = pct) |>
+  arrange(desc(fecha)) |>
+  transmute(
+    Encuesta = enlace_html(encuestadora, enlace),
+    Campo = campo,
+    n = muestra,
+    across(c(PP, PSOE, VOX, SUMAR, PODEMOS, SALF, BLOQUE), \(x) round(x, 1))
+  )
+stopifnot(nrow(tabla_m1) == procedencia$n_encuestas_m1)
+saveRDS(tabla_m1, here("outputs", "tabla_encuestas_m1.rds"))
+
+b <- read_csv(here("data", "encuestas_meta_bloque.csv"), show_col_types = FALSE) |>
+  distinct(encuestadora, campo, enlace, subcela, .keep_all = TRUE)
+tabla_m2 <- b |>
+  select(encuestadora, campo, fecha, muestra, enlace, bloque_pct, subcela, pct) |>
+  pivot_wider(names_from = subcela, values_from = pct) |>
+  arrange(desc(fecha)) |>
+  transmute(
+    Encuesta = enlace_html(encuestadora, enlace),
+    Campo = campo,
+    n = muestra,
+    BLOQUE = round(bloque_pct, 1),
+    across(c(Junts, ERC, PNV, `EH Bildu`, BNG, CC, UPN, RESTO), \(x) round(x, 1))
+  )
+stopifnot(nrow(tabla_m2) == procedencia$n_encuestas_m2)
+saveRDS(tabla_m2, here("outputs", "tabla_encuestas_m2.rds"))
+
+por_encuesta <- distinct(b, encuestadora, campo, enlace, bloque_votos)
+saveRDS(
+  sum(por_encuesta$bloque_votos[por_encuesta$encuestadora == "ElectoPanel"]) /
+    sum(por_encuesta$bloque_votos),
+  here("outputs", "peso_electopanel.rds")
+)
+
 cat(sprintf(
   "\n✓ R/02_figuras.R completado. %d figuras en outputs/figuras/\n",
   length(list.files(here("outputs", "figuras"), pattern = "\\.rds$"))
