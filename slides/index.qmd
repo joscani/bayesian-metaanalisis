@@ -9,7 +9,7 @@ lang: es
 format:
   revealjs:
     theme: [default, theme-jrc.scss]
-    fig-dpi: 220
+    fig-format: svg
     slide-level: 2
 params:
   estimacion_29n: true
@@ -34,18 +34,28 @@ source(here("R", "00_setup.R"))
 # del 29N. Se renderiza con: quarto render slides/index.qmd -P estimacion_29n:false
 estim <- isTRUE(params$estimacion_29n)
 
-leer_fig <- function(nombre) readRDS(here("outputs", "figuras", paste0(nombre, ".rds")))
+leer_fig <- function(nombre) {
+  readRDS(here("outputs", "figuras", paste0(nombre, ".rds")))
+}
 leer <- function(nombre) readRDS(here("outputs", paste0(nombre, ".rds")))
 
 procedencia <- leer("procedencia")
 capa_error <- leer("capa_error")
 diagnosticos <- leer("diagnosticos")
 
-comparacion <- read_csv(here("data", "backtest_prov_comparacion.csv"), show_col_types = FALSE)
+comparacion <- read_csv(
+  here("data", "backtest_prov_comparacion.csv"),
+  show_col_types = FALSE
+)
 cob_prov <- function(v) {
-  comparacion$cobertura[comparacion$variante == v & comparacion$familia == "TOTAL"]
+  comparacion$cobertura[
+    comparacion$variante == v & comparacion$familia == "TOTAL"
+  ]
 }
-backtest <- read_csv(here("data", "backtest_escanos.csv"), show_col_types = FALSE)
+backtest <- read_csv(
+  here("data", "backtest_escanos.csv"),
+  show_col_types = FALSE
+)
 reglas <- read_csv(
   here("data", "coaliciones_izquierda_29N_provincias.csv"),
   col_types = cols(.default = col_character())
@@ -75,7 +85,7 @@ Las encuestas dan **porcentajes**. El Congreso reparte **escaños**.
 
 > "PP y VOX sumarían mayoría absoluta"
 
-Un titular así esconde una distribución entera de escenarios.
+Un titular así esconde una distribución entera de escenarios, porque pueden sumar de muchas formas distintas
 
 ::: {.fragment}
 Con un enfoque bayesiano no perseguimos **el número**.
@@ -108,7 +118,7 @@ Perseguimos **la distribución completa** y, con ella, la probabilidad de cada m
 
 - Fuentes: [ciento76](https://www.ciento76.es/encuestas) y [objetivo176](https://objetivo176.es/encuestas)
 - Solo encuestas con **tamaño muestral publicado**
-- Sin CIS ni ElectoPanel en el modelo de los grandes
+- Sin CIS ni ElectoPanel en el modelo de los grandes. Decisión mía 
 - Modelo 1: **`r procedencia$n_encuestas_m1` encuestas de `r procedencia$n_casas_m1` casas**, hasta el `r corte`
 - Modelo 2: **`r procedencia$n_encuestas_m2` encuestas de `r procedencia$n_casas_m2` casas**, desde junio de 2025
 
@@ -132,10 +142,24 @@ Cada encuesta se convierte en votos: porcentaje publicado × tamaño muestral. C
 ```{r}
 #| echo: true
 pct <- rbind(
-  A = c(PP = 32, PSOE = 27, VOX = 19, SUMAR = 6,
-        PODEMOS = 3, SALF = 2, BLOQUE = 11),
-  B = c(PP = 30, PSOE = 28, VOX = 20, SUMAR = 7,
-        PODEMOS = 2, SALF = 2, BLOQUE = 11)
+      A = c(
+            PP = 32,
+            PSOE = 27,
+            VOX = 19,
+            SUMAR = 6,
+            PODEMOS = 3,
+            SALF = 2,
+            BLOQUE = 11
+      ),
+      B = c(
+            PP = 30,
+            PSOE = 28,
+            VOX = 20,
+            SUMAR = 7,
+            PODEMOS = 2,
+            SALF = 2,
+            BLOQUE = 11
+      )
 )
 n <- c(A = 1000, B = 3000)
 cell_counts <- round(pct / 100 * n)
@@ -163,10 +187,17 @@ Modelo **multinomial bayesiano** con `brms`: cada encuesta aporta un vector de v
 form <- brmsformula(
   cell_counts | trials(n) ~ time + (1 | encuestadora)
 )
-brm(form, dat, multinomial(),
-    prior = priors_multinomial(form, dat),
-    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
-    control = list(adapt_delta = 0.95, max_treedepth = 12))
+brm(
+  form,
+  dat,
+  multinomial(),
+  prior = priors_multinomial(form, dat),
+  iter = 4000,
+  warmup = 1000,
+  chains = 4,
+  init = 0.1,
+  control = list(adapt_delta = 0.95, max_treedepth = 12)
+)
 ```
 
 ::: {.incremental}
@@ -195,10 +226,17 @@ Reparte el BLOQUE entre Junts, ERC, PNV, EH Bildu, BNG, CC, UPN y RESTO.
 #| label: snippet-modelo-2
 form <- brmsformula(cell_counts | trials(bloque) ~ time)
 
-brm(form, dat, multinomial(),
+brm(
+    form,
+    dat,
+    multinomial(),
     prior = priors_multinomial(form, dat),
-    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
-    control = list(adapt_delta = 0.95))
+    iter = 4000,
+    warmup = 1000,
+    chains = 4,
+    init = 0.1,
+    control = list(adapt_delta = 0.95)
+)
 ```
 
 ::: {.incremental}
@@ -215,6 +253,40 @@ brm(form, dat, multinomial(),
 - ElectoPanel está en este modelo y no en el modelo 1. Aquí hace falta porque es de las pocas casas que publican los regionales.
 :::
 
+## Del ajuste a los draws
+
+`posterior_epred()` da una proporción por draw y categoría, para el día de la elección.
+
+```{r}
+#| echo: true
+#| eval: false
+#| label: snippet-epred
+# Modelo 1: un epred por casa y media entre casas, draw a draw
+casas <- unique(as.character(mod_1$data$encuestadora))
+epred_casas <- map(casas, \(cs) {
+  nd <- tibble(time = t_e, n = 1, encuestadora = cs)
+  posterior_epred(mod_1, newdata = nd)
+})
+d1 <- Reduce(`+`, epred_casas)[, 1, ] / length(casas) # 12.000 × 7
+
+# Modelo 2: reparto interno del BLOQUE
+nd <- tibble(time = t_e, bloque = 1)
+d2 <- posterior_epred(mod_2, newdata = nd)[, 1, ] # 12.000 × 8
+```
+
+- `n = 1` y `bloque = 1`: con un ensayo, el epred es una proporción
+- `[, 1, ]`: el array es draws × filas de `newdata` × categorías
+
+::: {.notes}
+- Es la pieza que une `brm()` con todo lo demás: de aquí en adelante solo opero con matrices de draws.
+- `t_e` es `time` en la fecha de la elección: los días desde el 1 de julio hasta el 29N.
+- `posterior_epred()` da el valor esperado, sin ruido multinomial. `posterior_predict()` añadiría ese ruido y daría recuentos.
+- El modelo 1 da 7 categorías y el modelo 2 da 8 subceldas. Al repartir el BLOQUE salen las 14 categorías.
+- Por qué una media entre casas: está en la slide extra "Lección de brms".
+- Código real en `R/01_exportar_desde_blog.R`, función `epred_casa_media()`, escrito allí con un bucle.
+- En la simulación uso 6.000 draws de cada modelo, de los 12.000 ajustados.
+:::
+
 ## Cómo encajan los dos modelos
 
 Cada draw del modelo 1 da el tamaño; cada draw del modelo 2, la composición. Ejemplo de juguete:
@@ -222,14 +294,31 @@ Cada draw del modelo 1 da el tamaño; cada draw del modelo 2, la composición. E
 ```{r}
 #| echo: true
 # un draw del modelo 2: composición del BLOQUE
-c2 <- c(ERC = 42, Junts = 18, PNV = 13, EH_Bildu = 15,
-        BNG = 8, CC = 5, UPN = 2, RESTO = 7) / 110
+c2 <- c(
+        ERC = 42,
+        Junts = 18,
+        PNV = 13,
+        EH_Bildu = 15,
+        BNG = 8,
+        CC = 5,
+        UPN = 2,
+        RESTO = 7
+) /
+        110
 # un draw del modelo 1
-d1 <- c(PP = 32.6, PSOE = 27.1, VOX = 19.2, FA = 5.2,
-        Podemos = 2.8, SALF = 1.8, BLOQUE = 11.3)
+d1 <- c(
+        PP = 32.6,
+        PSOE = 27.1,
+        VOX = 19.2,
+        FA = 5.2,
+        Podemos = 2.8,
+        SALF = 1.8,
+        BLOQUE = 11.3
+)
 
 draw <- c(d1[1:6], d1[["BLOQUE"]] * c2)
-round(draw[c("PP", "ERC", "PNV")], 1); sum(draw)
+round(draw[c("PP", "ERC", "PNV")], 1)
+sum(draw)
 ```
 
 ::: {.notes}
@@ -245,7 +334,7 @@ round(draw[c("PP", "ERC", "PNV")], 1); sum(draw)
 ## Aquí acaba la mayoría de agregadores…
 
 ::: {.fragment .center-text style="font-size: 1.4em; margin-top: 1em;"}
-…y aquí empieza lo interesante.
+…y aquí empieza lo divertido.
 :::
 
 ## Cuatro fuentes de incertidumbre
@@ -267,10 +356,10 @@ round(draw[c("PP", "ERC", "PNV")], 1); sum(draw)
 - **Correlación entre el error con PP y el error con VOX: `r num_neg(capa_error$cor_pp_vox)`**
 :::
 
-::: {.callout style="margin-top: 1em;"}
+::: {.callout .fragment style="margin-top: 1em;"}
 Esa correlación sale del modelo [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian), con 44 elecciones. Su IC 90 % es [`r num_neg(capa_error$cor_pp_vox_q05)`; `r num_neg(capa_error$cor_pp_vox_q95)`].
 
-Si las encuestas se pasan con uno, se quedan cortas con el otro: fallan más al **repartir** entre PP y VOX que con su suma. Con solo las 3 generales con VOX, el signo sale al revés.
+Si las encuestas se pasan con uno, se quedan cortas con el otro: fallan más al **repartir** entre PP y VOX que con su suma.
 :::
 
 ::: {.notes}
@@ -280,6 +369,35 @@ Si las encuestas se pasan con uno, se quedan cortas con el otro: fallan más al 
 - La correlación viene de la matriz `Omega` del post full bayesian, en escala logit. Aquí la aplico a un error en puntos: es una aproximación.
 - Las 3 generales con VOX daban +0,92. Con tan pocas elecciones, ese valor es muy inestable.
 - El BLOQUE lleva un shock propio de 1,5 puntos: es un supuesto, no una estimación.
+:::
+
+## El error histórico, en código
+
+Cada fila de `d6` es un draw: sumo un error distinto a cada una.
+
+```{r}
+#| echo: true
+#| eval: false
+#| label: snippet-error
+# PP, PSOE, VOX, SUMAR + Podemos y SALF: errores correlacionados
+e <- MASS::mvrnorm(n_draws, error_mu, Sigma_error)
+d6[, 1:5] <- pmax(d6[, 1:5] + e, 0)
+
+# BLOQUE: shock propio, y vuelta a sumar 100
+d6[, "BLOQUE"] <- pmax(d6[, "BLOQUE"] + rnorm(n_draws, 0, 1.5), 0)
+d6 <- 100 * d6 / rowSums(d6)
+
+# Ahora sí, reparto el BLOQUE
+voto <- cbind(d6[, 1:5], d6[, "BLOQUE"] * d2)
+```
+
+La capa no reestima nada: solo transforma los draws.
+
+::: {.notes}
+- `d6` son los draws del modelo 1 en porcentaje, con SUMAR y Podemos sumados en una columna. La historia solo conoce esa suma.
+- `Sigma_error` lleva la correlación PP-VOX de la slide anterior. Sin esa matriz, el error de cada partido sería independiente.
+- Simplificado: el código real reparte después el error de la suma entre SUMAR y Podemos, con el peso de cada lista en el draw. Por eso el resultado final tiene 14 categorías.
+- Código real: `extraer_shares13()`, en `blog_quarto/2026/10/simular_escanos.R`.
 :::
 
 ## Provincia: la idea
@@ -303,8 +421,10 @@ El cambio de ratio tiene un efecto de **comunidad** y otro de **provincia**.
 ```{r}
 #| echo: true
 #| eval: false
-bf(dlr ~ 0 + partido + repeticion + (0 + partido || codigo_ccaa),
-   sigma ~ 0 + celda_sigma)
+bf(
+   dlr ~ 0 + partido + repeticion + (0 + partido || codigo_ccaa),
+   sigma ~ 0 + celda_sigma
+)
 ```
 
 La cobertura sube a **`r pct_es(cob_prov("shock brms (draws)"), 0)`**, calculada con las mismas elecciones que calibran los efectos.
@@ -324,6 +444,35 @@ Sin la transición probada, la cobertura no cambia (*leave-one-transition-out*).
 - El 29N es una transición fresca: la simulación usa las τ_p de esas celdas.
 - En la simulación, cada draw multiplica el ratio por exp(η + ε) y se renormaliza, para no cambiar el voto nacional.
 - La cobertura de esta slide es *in-sample*. El *leave-one-transition-out* reestima sin la transición probada y la cobertura no se mueve.
+:::
+
+## Provincia: de los draws al voto
+
+Para cada partido, cada draw recibe sus propios efectos de comunidad y de provincia.
+
+```{r}
+#| echo: true
+#| eval: false
+#| label: snippet-shock
+eta <- matrix(rnorm(n_draws * n_ccaa), n_draws) * tau_c # comunidad
+eps <- matrix(rnorm(n_draws * n_prov), n_draws) * tau_p # provincia
+
+M <- sweep(exp(eta[, ccaa_idx] + eps), 2, ratio_23j, `*`)
+M <- M / as.numeric(M %*% w) # el voto nacional no cambia
+
+voto_prov <- voto_nac * M # draws × provincias
+```
+
+`tau_c` y `tau_p` son vectores con un valor por draw: arrastran la incertidumbre del ajuste.
+
+::: {.notes}
+- `eta` tiene una columna por comunidad y `eps`, una por provincia. `eta[, ccaa_idx]` da el mismo efecto a todas las provincias de una comunidad.
+- `ratio_23j` es el ratio de la slide "Provincia: la idea": % provincia / % nacional en el 23J.
+- `w` es el peso de cada provincia en los votos válidos de referencia. Por eso `voto_prov %*% w` devuelve el voto nacional del draw.
+- `matrix * vector` recicla por columnas: cada fila se multiplica por el tau de su draw.
+- Los partidos grandes usan draws del posterior de los tau. Los regionales usan un valor fijo (*plug-in*) y no arrastran esa incertidumbre.
+- Simplificado: el código real hace esto para cada partido y después normaliza dentro de cada provincia, para que sume 100. Luego aplica las reglas de candidaturas.
+- Código real: `simular()`, en `blog_quarto/2026/10/simular_escanos.R`.
 :::
 
 ```{r, child=if (estim) "_provincial.qmd"}
@@ -387,6 +536,27 @@ Usa una media simple de encuestas: prueba las capas de error y de escaños, no e
 - No sabemos qué participación supone cada encuestadora
 :::
 
+## Un único modelo
+
+::: {.center-text}
+![](`r knitr::image_uri(here("slides", "dag_modelo.svg"))`){fig-alt="DAG simplificado del modelo conjunto: generales a la izquierda, autonómicas a la derecha y, en medio, las matrices de covarianza que comparten." width="100%"}
+:::
+
+::: {.center-text style="font-size: 0.75em;"}
+Más detalle en el post [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian).
+:::
+
+::: {.notes}
+- Es el intento de meter toda la incertidumbre en un único modelo, en Stan: encuestas, resultados y error se estiman a la vez.
+- Notación: gris es dato, blanco es parámetro y doble círculo es una cantidad determinista.
+- **A, generales:** las encuestas `y` miden el voto latente `θ` de cada semana, con el efecto de cada casa `β`. El resultado `r` solo existe para las 5 generales pasadas.
+- **B, autonómicas:** el error de cada encuesta `z` depende de la elección y de la casa. Aporta 39 elecciones.
+- **En medio, lo compartido:** `Ω` es la correlación entre los errores de los partidos. Conecta generales y autonómicas.
+- De aquí sale la correlación PP-VOX de la slide "El error histórico": 5 generales y 39 autonómicas, 44 elecciones.
+- Para 2026, el error `ε` no se observa: se sortea con el sesgo `μ` y la covarianza `Σ` de las generales.
+- Es una versión simplificada del modelo. El detalle está en el post.
+:::
+
 ## Gracias
 
 ::: {.center-text style="margin-top: 1.5em;"}
@@ -417,10 +587,13 @@ casas <- unique(modelo$data$encuestadora)
 acum <- 0
 for (cs in casas) {
   # re_formula = NULL, el valor por defecto
-  acum <- acum + posterior_epred(
-    modelo, newdata = tibble(time = t_e, n = 1, encuestadora = cs))
+  acum <- acum +
+    posterior_epred(
+      modelo,
+      newdata = tibble(time = t_e, n = 1, encuestadora = cs)
+    )
 }
-epred <- acum / length(casas)  # media entre casas, draw a draw
+epred <- acum / length(casas) # media entre casas, draw a draw
 ```
 
 - `re_formula = NA` quita todos los efectos y ensancha el posterior
@@ -442,12 +615,14 @@ Los priors por defecto de `brms` en multinomial son **impropios**. Los sustituyo
 ```{r}
 #| echo: true
 #| eval: false
-mutate(prior = case_when(
-  class == "b"         ~ "normal(0, 2)",
-  class == "Intercept" ~ "normal(0, 2)",
-  class == "sd"        ~ "exponential(1)",
-  TRUE                 ~ prior
-))
+mutate(
+  prior = case_when(
+    class == "b" ~ "normal(0, 2)",
+    class == "Intercept" ~ "normal(0, 2)",
+    class == "sd" ~ "exponential(1)",
+    TRUE ~ prior
+  )
+)
 ```
 
 ::: {.notes}
@@ -462,10 +637,22 @@ mutate(prior = case_when(
 ```{r}
 tibble(
   Modelo = c("Modelo 1", "Modelo 2"),
-  `Rhat máximo` = num_es(c(diagnosticos$grande$rhat_max, diagnosticos$bloque$rhat_max), 3),
-  `ESS mínimo` = num_es(c(diagnosticos$grande$ess_min, diagnosticos$bloque$ess_min), 0),
-  Divergentes = c(diagnosticos$grande$n_divergentes, diagnosticos$bloque$n_divergentes),
-  Muestras = num_es(c(diagnosticos$grande$n_transiciones, diagnosticos$bloque$n_transiciones), 0)
+  `Rhat máximo` = num_es(
+    c(diagnosticos$grande$rhat_max, diagnosticos$bloque$rhat_max),
+    3
+  ),
+  `ESS mínimo` = num_es(
+    c(diagnosticos$grande$ess_min, diagnosticos$bloque$ess_min),
+    0
+  ),
+  Divergentes = c(
+    diagnosticos$grande$n_divergentes,
+    diagnosticos$bloque$n_divergentes
+  ),
+  Muestras = num_es(
+    c(diagnosticos$grande$n_transiciones, diagnosticos$bloque$n_transiciones),
+    0
+  )
 ) |>
   knitr::kable(align = "lrrrr")
 ```
