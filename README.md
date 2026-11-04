@@ -87,8 +87,11 @@ quarto render slides/index.qmd -P estimacion_29n:false
 
 ## Copia offline
 
+Ejecútalo desde `slides/`. Con otra ruta, las imágenes no se embeben.
+
 ```bash
-quarto render slides/index.qmd -M embed-resources:true -o index-offline.html
+cd slides
+quarto render index.qmd --to revealjs -M embed-resources:true -o index-offline.html
 ```
 
-Genera un único HTML que funciona sin red. No se versiona.
+Genera `slides/index-offline.html`, un único HTML de unos 5,7 MB que funciona sin red. No se versiona.
