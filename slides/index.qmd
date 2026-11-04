@@ -142,24 +142,10 @@ Cada encuesta se convierte en votos: porcentaje publicado × tamaño muestral. C
 ```{r}
 #| echo: true
 pct <- rbind(
-      A = c(
-            PP = 32,
-            PSOE = 27,
-            VOX = 19,
-            SUMAR = 6,
-            PODEMOS = 3,
-            SALF = 2,
-            BLOQUE = 11
-      ),
-      B = c(
-            PP = 30,
-            PSOE = 28,
-            VOX = 20,
-            SUMAR = 7,
-            PODEMOS = 2,
-            SALF = 2,
-            BLOQUE = 11
-      )
+  A = c(PP = 32, PSOE = 27, VOX = 19, SUMAR = 6,
+        PODEMOS = 3, SALF = 2, BLOQUE = 11),
+  B = c(PP = 30, PSOE = 28, VOX = 20, SUMAR = 7,
+        PODEMOS = 2, SALF = 2, BLOQUE = 11)
 )
 n <- c(A = 1000, B = 3000)
 cell_counts <- round(pct / 100 * n)
@@ -187,17 +173,10 @@ Modelo **multinomial bayesiano** con `brms`: cada encuesta aporta un vector de v
 form <- brmsformula(
   cell_counts | trials(n) ~ time + (1 | encuestadora)
 )
-brm(
-  form,
-  dat,
-  multinomial(),
-  prior = priors_multinomial(form, dat),
-  iter = 4000,
-  warmup = 1000,
-  chains = 4,
-  init = 0.1,
-  control = list(adapt_delta = 0.95, max_treedepth = 12)
-)
+brm(form, dat, multinomial(),
+    prior = priors_multinomial(form, dat),
+    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
+    control = list(adapt_delta = 0.95, max_treedepth = 12))
 ```
 
 ::: {.incremental}
@@ -226,17 +205,10 @@ Reparte el BLOQUE entre Junts, ERC, PNV, EH Bildu, BNG, CC, UPN y RESTO.
 #| label: snippet-modelo-2
 form <- brmsformula(cell_counts | trials(bloque) ~ time)
 
-brm(
-    form,
-    dat,
-    multinomial(),
+brm(form, dat, multinomial(),
     prior = priors_multinomial(form, dat),
-    iter = 4000,
-    warmup = 1000,
-    chains = 4,
-    init = 0.1,
-    control = list(adapt_delta = 0.95)
-)
+    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
+    control = list(adapt_delta = 0.95))
 ```
 
 ::: {.incremental}
@@ -294,31 +266,14 @@ Cada draw del modelo 1 da el tamaño; cada draw del modelo 2, la composición. E
 ```{r}
 #| echo: true
 # un draw del modelo 2: composición del BLOQUE
-c2 <- c(
-        ERC = 42,
-        Junts = 18,
-        PNV = 13,
-        EH_Bildu = 15,
-        BNG = 8,
-        CC = 5,
-        UPN = 2,
-        RESTO = 7
-) /
-        110
+c2 <- c(ERC = 42, Junts = 18, PNV = 13, EH_Bildu = 15,
+        BNG = 8, CC = 5, UPN = 2, RESTO = 7) / 110
 # un draw del modelo 1
-d1 <- c(
-        PP = 32.6,
-        PSOE = 27.1,
-        VOX = 19.2,
-        FA = 5.2,
-        Podemos = 2.8,
-        SALF = 1.8,
-        BLOQUE = 11.3
-)
+d1 <- c(PP = 32.6, PSOE = 27.1, VOX = 19.2, FA = 5.2,
+        Podemos = 2.8, SALF = 1.8, BLOQUE = 11.3)
 
 draw <- c(d1[1:6], d1[["BLOQUE"]] * c2)
-round(draw[c("PP", "ERC", "PNV")], 1)
-sum(draw)
+round(draw[c("PP", "ERC", "PNV")], 1); sum(draw)
 ```
 
 ::: {.notes}
