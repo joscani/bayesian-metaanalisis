@@ -9,6 +9,7 @@ lang: es
 format:
   revealjs:
     theme: [default, theme-jrc.scss]
+    fig-dpi: 220
     slide-level: 2
 params:
   estimacion_29n: true

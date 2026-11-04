@@ -123,7 +123,7 @@ guardar_fig(fig_posterior_dia_e, "fig_posterior_dia_e")
 
 provincias_ej <- c(
   "Las Palmas", "Santa Cruz de Tenerife",
-  "Madrid", "Barcelona", "Sevilla", "Bizkaia", "Almería", "Soria"
+  "Madrid", "Barcelona", "Granada", "Bizkaia", "Almería", "Soria"
 )
 
 prov_resumen <- readRDS(here("outputs", "prov_resumen.rds")) |>
@@ -149,7 +149,7 @@ fig_provincial <- prov_resumen |>
   labs(
     title = "Voto provincial simulado",
     subtitle = "Barra fina: IC 90 % · Barra gruesa: IC 50 % · Rombo: resultado del 23J",
-    caption = "Sumar incluía a Podemos el 23J. VOX no presentó lista en Santa Cruz de Tenerife.",
+    caption = "Cada columna tiene su propio eje. Sumar incluía a Podemos el 23J. VOX no presentó lista en Santa Cruz de Tenerife.",
     x = "Voto (%)",
     y = NULL
   ) +
@@ -320,6 +320,90 @@ guardar_fig(
   ),
   "fig_ridges_resto"
 )
+
+## ---- 5b. Escaños en Canarias ---------------------------------------------------
+
+canarias <- readRDS(here("outputs", "escanos_canarias.rds")) |>
+  pivot_longer(-c(.draw, provincia), names_to = "familia", values_to = "escanos") |>
+  filter(familia %in% names(nombres_partido)) |>
+  mutate(partido = a_nombre(familia))
+stopifnot(
+  canarias |>
+    group_by(.draw, provincia) |>
+    summarise(s = sum(escanos), .groups = "drop") |>
+    distinct(provincia, s) |>
+    nrow() == 2
+)
+
+resumen_canarias <- canarias |>
+  group_by(provincia, partido) |>
+  summarise(
+    media = mean(escanos),
+    mediana = median(escanos),
+    q05 = quantile(escanos, 0.05),
+    q95 = quantile(escanos, 0.95),
+    p_escano = mean(escanos >= 1),
+    .groups = "drop"
+  ) |>
+  filter(media >= 0.02)
+saveRDS(resumen_canarias, here("outputs", "resumen_canarias.rds"))
+
+niveles_can <- resumen_canarias |>
+  group_by(partido) |>
+  summarise(m = sum(media), .groups = "drop") |>
+  arrange(m) |>
+  pull(partido)
+fila_can <- setNames(seq_along(niveles_can), niveles_can)
+
+barras_can <- canarias |>
+  semi_join(resumen_canarias, by = c("provincia", "partido")) |>
+  count(provincia, partido, escanos) |>
+  group_by(provincia, partido) |>
+  mutate(alto = 0.85 * n / max(n)) |>
+  ungroup() |>
+  mutate(y = fila_can[partido])
+
+x_texto_can <- max(barras_can$escanos) + 1
+
+fig_canarias <- ggplot() +
+  geom_rect(
+    data = barras_can,
+    aes(xmin = escanos - 0.45, xmax = escanos + 0.45, ymin = y, ymax = y + alto, fill = partido),
+    alpha = 0.85
+  ) +
+  geom_segment(
+    data = resumen_canarias |> mutate(y = fila_can[partido]),
+    aes(x = media, xend = media, y = y, yend = y + 0.85),
+    color = "white", linewidth = 1
+  ) +
+  geom_text(
+    data = resumen_canarias |>
+      mutate(
+        y = fila_can[partido],
+        x_texto = x_texto_can,
+        texto = sprintf("%d  (%d – %d)", as.integer(mediana), as.integer(q05), as.integer(q95))
+      ),
+    aes(x = x_texto, y = y + 0.35, label = texto),
+    hjust = 0, size = 4.8, fontface = "bold", color = "grey25"
+  ) +
+  facet_wrap(~provincia, nrow = 1) +
+  scale_fill_manual(values = colores_esc, guide = "none") +
+  scale_y_continuous(breaks = fila_can + 0.35, labels = names(fila_can)) +
+  scale_x_continuous(
+    breaks = 0:max(barras_can$escanos),
+    limits = c(-0.6, x_texto_can + 2.6)
+  ) +
+  labs(
+    title = "Escaños en Canarias",
+    subtitle = "Barra: frecuencia de cada entero · Blanco: media · Cifras: mediana (IC 90 %)",
+    caption = "Frente Amplio: Unidad del Pueblo Canario, con Podemos. La simulación no suma el voto de Nueva Canarias a esta lista.",
+    x = "Escaños",
+    y = NULL
+  ) +
+  theme_slides(base_size = 16) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor.x = element_blank())
+
+guardar_fig(fig_canarias, "fig_canarias")
 
 ## ---- 6. Probabilidad de cada mayoría -------------------------------------------
 

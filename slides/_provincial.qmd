@@ -10,5 +10,6 @@ leer_fig("fig_provincial")
 - En Canarias, el Frente Amplio va en lista unida con Podemos: es la regla `unida` de la slide de candidaturas.
 - VOX no tuvo lista en Santa Cruz de Tenerife el 23J. Su reparto allí usa el ratio del 10N, y por eso esa celda no lleva rombo.
 - CC sale de la composición del BLOQUE del modelo 2, con el reparto provincial del 23J.
-- Madrid, Barcelona, Sevilla, Bizkaia, Almería y Soria son ejemplos de provincias distintas.
+- Madrid, Barcelona, Granada, Bizkaia, Almería y Soria son ejemplos de provincias distintas.
+- **Eje x:** cada columna tiene su propia escala, porque el voto de cada partido se mueve en rangos muy distintos. Compara filas dentro de una columna, no longitudes entre columnas.
 :::

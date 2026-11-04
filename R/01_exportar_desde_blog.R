@@ -155,6 +155,16 @@ prov_resumen <- map_dfr(fams_prov, \(f) {
   )
 saveRDS(prov_resumen, ruta_out("prov_resumen.rds"))
 
+# escaños por draw en las dos provincias canarias
+i_canarias <- match(c("Las Palmas", "Santa Cruz de Tenerife"), sim$prov_ref$provincia)
+stopifnot(!anyNA(i_canarias))
+escanos_canarias <- map_dfr(i_canarias, \(i) {
+  m <- sim$prov_escanos[, i, ]
+  as_tibble(m) |>
+    mutate(.draw = row_number(), provincia = sim$prov_ref$provincia[i], .before = 1)
+})
+saveRDS(escanos_canarias, ruta_out("escanos_canarias.rds"))
+
 # ---- 4. posterior del día E, sin capas ------------------------------------------
 
 log_paso("4. posterior del día E y PPC")

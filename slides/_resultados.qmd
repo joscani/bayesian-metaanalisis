@@ -12,6 +12,22 @@ leer_fig("fig_ridges_grandes")
 leer_fig("fig_ridges_resto")
 ```
 
+## Resultado: Canarias
+
+```{r}
+#| label: g-fig-canarias
+leer_fig("fig_canarias")
+```
+
+::: {.notes}
+- Las Palmas elige 8 escaños y Santa Cruz de Tenerife, 7.
+- Cada provincia reparte con D'Hondt y umbral del 3 %, igual que las demás.
+- CC sale de la composición del BLOQUE (modelo 2) y de su reparto provincial del 23J. No hay encuestas de CC por provincia.
+- VOX en Santa Cruz de Tenerife usa el ratio del 10N, porque no tuvo lista el 23J.
+- **Limitación:** la lista real es Unidad del Pueblo Canario, con Nueva Canarias, IU, Movimiento Sumar y Podemos. La regla `unida` solo suma Frente Amplio y Podemos.
+- El voto de Nueva Canarias no se suma a esa lista, y `OTROS`, que pesó un 9,2 % en Las Palmas el 23J, no compite por escaños. Sus escaños están probablemente infraestimados.
+:::
+
 ## ¿Qué mayoría?
 
 ```{r}
