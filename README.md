@@ -59,6 +59,9 @@ scripts/actualizar.sh
 
 El script descarga encuestas y sale si no hay nuevas. Si las hay, reajusta y
 comprueba convergencia con `R/04_comprobar.R`. Solo publica si todo pasa.
+También hace commit y push en `blog_quarto` de los ficheros que cambian durante
+la ejecución, como las encuestas descargadas. Lo que el blog ya tenía sin commit
+no se toca.
 Con `--sin-publicar` no confirma ni publica nada. Los datos se congelan el
 22 de noviembre.
 

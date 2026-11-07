@@ -3,6 +3,11 @@
 #
 #   scripts/actualizar.sh                    # flujo completo, con publicación
 #   scripts/actualizar.sh --sin-publicar     # no hace commit, push ni publicación
+#                                            # (ni aquí ni en el blog)
+#
+# Con publicación, también hace commit y push en blog_quarto de los ficheros
+# que cambian durante la ejecución (las encuestas descargadas), para que otro
+# equipo parta del mismo estado. Lo que el blog ya tenía sin commit no se toca.
 #   scripts/actualizar.sh --sin-descargar    # usa los CSV que ya hay en el blog
 #   scripts/actualizar.sh --forzar           # reajusta aunque no haya cambios
 #
@@ -49,6 +54,39 @@ fi
 
 paso() { echo "[$(date +%H:%M:%S)] $*"; }
 
+# ficheros del blog con cambios (modificados o nuevos), uno por línea
+lista_blog() {
+  {
+    git -C "$blog" -c core.quotepath=off diff --name-only HEAD
+    git -C "$blog" -c core.quotepath=off ls-files --others --exclude-standard
+  } | sort -u
+}
+
+# confirma y sube en el blog SOLO lo que ha cambiado durante esta ejecución:
+# lo que ya tenía cambios antes se queda como estaba. El push a master no
+# publica la web (el blog se publica con quarto publish netlify).
+subir_blog() {
+  # while read en vez de mapfile: macOS trae bash 3.2, sin mapfile
+  local nuevos=() f
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && nuevos+=("$f")
+  done < <(comm -13 <(echo "$blog_antes") <(lista_blog))
+  if [[ ${#nuevos[@]} -eq 0 ]]; then
+    paso "Blog: sin cambios que subir"
+    return
+  fi
+  git -C "$blog" add -- "${nuevos[@]}"
+  git -C "$blog" commit --quiet -m "Encuestas actualizadas hasta $hoy (scripts/actualizar.sh de bayesian-metaanalisis)"
+  git -C "$blog" push --quiet origin "$(git -C "$blog" branch --show-current)"
+  paso "Blog: subidos ${#nuevos[@]} ficheros: ${nuevos[*]}"
+}
+
+blog_antes="$(lista_blog)"
+if [[ -n "$blog_antes" ]]; then
+  paso "Aviso: el blog ya tenía cambios sin commit; no se suben:"
+  echo "$blog_antes" | sed 's/^/    /'
+fi
+
 if $descargar; then
   paso "1/5 Actualiza encuestas en el blog"
   (cd "$blog" && Rscript 2026/10/actualizar_meta.R)
@@ -61,6 +99,11 @@ for f in encuestas_meta_grande_sep.csv encuestas_meta_bloque.csv; do
   cmp -s "$blog/2026/10/$f" "$repo/data/$f" || hay_cambios=true
 done
 if ! $hay_cambios && ! $forzar; then
+  # la descarga puede haber tocado otros ficheros del blog (p. ej. el
+  # scrape completo): se suben para que otro equipo parta del mismo estado
+  if $publicar; then
+    subir_blog
+  fi
   paso "Terminado: no hay encuestas nuevas. No se reajusta ni se publica."
   exit 0
 fi
@@ -84,6 +127,7 @@ if ! $publicar; then
 fi
 
 paso "5/5 Confirma y publica"
+subir_blog
 cd "$repo"
 git add outputs data
 git commit --quiet -m "Actualiza las slides con las encuestas hasta $hoy"
