@@ -63,8 +63,9 @@ lista_blog() {
 }
 
 # confirma y sube en el blog SOLO lo que ha cambiado durante esta ejecución:
-# lo que ya tenía cambios antes se queda como estaba. El push a master no
-# publica la web (el blog se publica con quarto publish netlify).
+# lo que ya tenía cambios antes se queda como estaba. OJO: Netlify publica
+# la web en cuanto llega a master un cambio de _site/. Aquí solo se suben las
+# encuestas descargadas (nada de _site/), así que la web no cambia.
 subir_blog() {
   # while read en vez de mapfile: macOS trae bash 3.2, sin mapfile
   local nuevos=() f
