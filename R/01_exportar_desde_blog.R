@@ -82,20 +82,18 @@ mod_b <- ajustar_bloque()
 
 # ---- 2. predicción con todos los efectos aleatorios ---------------------------
 
-# re_formula = NULL exige una casa en newdata: un epred por casa observada y
-# media entre casas, draw a draw (como mrp-multiencuesta/07_post_celdas.R)
+# re_formula = NULL exige una casa en newdata: una fila por casa observada y
+# media entre casas, draw a draw (como mrp-multiencuesta/07_post_celdas.R).
+# Devuelve draws × 1 × categorías, la misma forma que con una sola fila.
 epred_casa_media <- function(modelo, time_obj, ids) {
   casas <- unique(as.character(modelo$data$encuestadora))
-  acum <- 0
-  for (cs in casas) {
-    acum <- acum +
-      posterior_epred(
-        modelo,
-        newdata = tibble(time = time_obj, n = 1, encuestadora = cs),
-        draw_ids = ids
-      )
-  }
-  acum / length(casas)
+  ep <- posterior_epred(
+    modelo,
+    newdata = tibble(time = time_obj, n = 1, encuestadora = casas),
+    draw_ids = ids
+  )
+  m <- apply(ep, c(1, 3), mean)
+  array(m, c(dim(m)[1], 1, dim(m)[2]), list(NULL, NULL, dimnames(ep)[[3]]))
 }
 
 add_epred_original <- tidybayes::add_epred_draws

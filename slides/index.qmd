@@ -263,13 +263,11 @@ brm(
 #| echo: true
 #| eval: false
 #| label: snippet-epred
-# Modelo 1: un epred por casa y media entre casas, draw a draw
+# Modelo 1: una fila por casa y media entre casas, draw a draw
 casas <- unique(as.character(mod_1$data$encuestadora))
-epred_casas <- map(casas, \(cs) {
-  nd <- tibble(time = t_e, n = 1, encuestadora = cs)
-  posterior_epred(mod_1, newdata = nd)
-})
-d1 <- Reduce(`+`, epred_casas)[, 1, ] / length(casas) # 12.000 × 7
+nd <- tibble(time = t_e, n = 1, encuestadora = casas)
+ep <- posterior_epred(mod_1, newdata = nd) # 12.000 × 15 casas × 7
+d1 <- apply(ep, c(1, 3), mean)             # 12.000 × 7
 
 # Modelo 2: reparto interno del BLOQUE
 nd <- tibble(time = t_e, bloque = 1)
@@ -277,7 +275,7 @@ d2 <- posterior_epred(mod_2, newdata = nd)[, 1, ] # 12.000 × 8
 ```
 
 - `n = 1` y `bloque = 1`: con un ensayo, el epred es una proporción
-- `[, 1, ]`: el array es draws × filas de `newdata` × categorías
+- El array es draws × filas de `newdata` × categorías: `apply()` promedia las casas
 
 ::: {.notes}
 - Es la pieza que une `brm()` con todo lo demás: de aquí en adelante solo opero con matrices de draws.
@@ -285,7 +283,8 @@ d2 <- posterior_epred(mod_2, newdata = nd)[, 1, ] # 12.000 × 8
 - `posterior_epred()` da el valor esperado, sin ruido multinomial. `posterior_predict()` añadiría ese ruido y daría recuentos.
 - El modelo 1 da 7 categorías y el modelo 2 da 8 subceldas. Al repartir el BLOQUE salen las 14 categorías.
 - Por qué una media entre casas: está en la slide extra "Lección de brms".
-- Código real en `R/01_exportar_desde_blog.R`, función `epred_casa_media()`, escrito allí con un bucle.
+- `apply(ep, c(1, 3), mean)` mantiene las dimensiones 1 (draws) y 3 (categorías) y promedia la 2 (casas). Cada draw usa los mismos parámetros para todas las casas, así que la media se hace draw a draw.
+- Código real en `R/01_exportar_desde_blog.R`, función `epred_casa_media()`. Antes tenía un bucle por casa: da lo mismo (diferencia máxima de 1e-16 con 500 draws), pero esta versión es unas 20 veces más rápida.
 - En la simulación uso 6.000 draws de cada modelo, de los 12.000 ajustados.
 :::
 

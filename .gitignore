@@ -20,3 +20,6 @@ renv/library/
 renv/staging/
 
 **/*.quarto_ipynb
+
+# macOS
+.DS_Store
