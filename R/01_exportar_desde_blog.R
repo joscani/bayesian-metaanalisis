@@ -44,6 +44,25 @@ log_paso <- function(...) cat(format(Sys.time(), "[%H:%M:%S] "), ..., "\n", sep 
 
 source(here::here("2026/10/simular_escanos.R"))
 
+# ---- 0. tau del shock geográfico ----------------------------------------------
+# simular() lee tau_shock_draws.csv y tau_regionales.csv del blog. Antes de
+# usarlos, compruebo que ajustar_tau_shock.R los reproduce desde los datos
+# electorales. Ese script no escribe nada si los ficheros existen y coinciden;
+# si alguno falta o difiere, aquí se para.
+
+log_paso("0. ajustar_tau_shock.R: compruebo que los tau del blog se reproducen")
+salida_tau <- suppressWarnings(system2(
+  "Rscript",
+  here::here("2026/10/ajustar_tau_shock.R"),
+  stdout = TRUE,
+  stderr = TRUE
+))
+if (!is.null(attr(salida_tau, "status")) ||
+  sum(grepl("^reproducido", salida_tau)) != 5) {
+  cat(salida_tau, sep = "\n")
+  stop("los tau del blog no se reproducen: revisa 2026/10/ajustar_tau_shock.R")
+}
+
 # ---- 1. modelos, en models/ de este repo --------------------------------------
 
 f_mod_g_sep <- file.path(dir_repo, "models", "mod_meta_grande_sep")
@@ -320,6 +339,10 @@ git_blog <- function(...) system2("git", c("-C", here::here(), ...), stdout = TR
 procedencia <- list(
   blog_commit = git_blog("rev-parse", "--short", "HEAD"),
   blog_cambios_2026_10 = git_blog("status", "--short", "--", "2026/10"),
+  tau_md5 = tools::md5sum(here::here(
+    "2026/10",
+    c("mod_tau_shock.rds", "tau_shock_draws.csv", "tau_regionales.csv")
+  )),
   fecha_ejecucion = Sys.time(),
   ultima_encuesta = max(dat_g$fecha),
   primera_encuesta = min(dat_g$fecha),

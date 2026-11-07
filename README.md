@@ -33,6 +33,11 @@ copia aquí: `R/01_exportar_desde_blog.R` llama al código de
 [`blog_quarto/2026/10`](https://github.com/joscani/blog_quarto/tree/master/2026/10).
 `outputs/procedencia.rds` guarda el commit del blog y la fecha de la última encuesta.
 
+Los tau del reparto provincial también vienen del blog. Antes de simular,
+`R/01_exportar_desde_blog.R` ejecuta `2026/10/ajustar_tau_shock.R` y se para si
+no reproduce los 5 ficheros de tau desde los datos electorales.
+`procedencia.rds` guarda el md5 de esos ficheros.
+
 **Dos diferencias con `simular_escanos.R` del blog:**
 
 - **Predicción:** el blog usa `re_formula = NA`. Aquí se usa `re_formula = NULL`,
