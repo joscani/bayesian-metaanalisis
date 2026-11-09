@@ -148,24 +148,10 @@ Cada encuesta se convierte en votos: porcentaje publicado × tamaño muestral. C
 ```{r}
 #| echo: true
 pct <- rbind(
-      A = c(
-            PP = 32,
-            PSOE = 27,
-            VOX = 19,
-            SUMAR = 6,
-            PODEMOS = 3,
-            SALF = 2,
-            BLOQUE = 11
-      ),
-      B = c(
-            PP = 30,
-            PSOE = 28,
-            VOX = 20,
-            SUMAR = 7,
-            PODEMOS = 2,
-            SALF = 2,
-            BLOQUE = 11
-      )
+  A = c(PP = 32, PSOE = 27, VOX = 19,
+        SUMAR = 6, PODEMOS = 3, SALF = 2, BLOQUE = 11),
+  B = c(PP = 30, PSOE = 28, VOX = 20,
+        SUMAR = 7, PODEMOS = 2, SALF = 2, BLOQUE = 11)
 )
 n <- c(A = 1000, B = 3000)
 cell_counts <- round(pct / 100 * n)
@@ -193,17 +179,10 @@ Modelo **multinomial bayesiano** con `brms`: cada encuesta aporta un vector de v
 form <- brmsformula(
   cell_counts | trials(n) ~ time + (1 | encuestadora)
 )
-brm(
-  form,
-  dat,
-  multinomial(),
-  prior = priors_multinomial(form, dat),
-  iter = 4000,
-  warmup = 1000,
-  chains = 4,
-  init = 0.1,
-  control = list(adapt_delta = 0.95, max_treedepth = 12)
-)
+brm(form, dat, multinomial(),
+    prior = priors_multinomial(form, dat),
+    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
+    control = list(adapt_delta = 0.95, max_treedepth = 12))
 ```
 
 ::: {.incremental}
@@ -309,40 +288,40 @@ d2 <- posterior_epred(mod_2, newdata = nd)[, 1, ] # 12.000 × 8
 
 ## El error histórico
 
-124 encuestas de la última semana de **5 generales**, de 2015 a 2023.
+Lo estima el modelo [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian): 5 generales y 39 autonómicas, **44 elecciones**.
 
 ::: {.incremental}
-- Las encuestas infraestiman al PSOE 1,3 puntos; corrijo la mitad, **+`r num_es(capa_error$mu[["PSOE"]], 1)`**
-- Desviación típica entre 1,3 y 2,6 puntos según el partido
+- Cada draw trae su propio sesgo, su desviación y su correlación: **no hay valores fijos**
+- Desviación típica del error, en puntos: PP `r num_es(capa_error$sigma_pp[["PP"]], 1)`, PSOE `r num_es(capa_error$sigma_pp[["PSOE"]], 1)`, VOX `r num_es(capa_error$sigma_pp[["VOX"]], 1)`
 - **Correlación entre el error con PP y el error con VOX: `r num_neg(capa_error$cor_pp_vox)`**
 :::
 
 ::: {.callout .fragment style="margin-top: 1em;"}
-Esa correlación sale del modelo [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian), con 44 elecciones. Su IC 90 % es [`r num_neg(capa_error$cor_pp_vox_q05)`; `r num_neg(capa_error$cor_pp_vox_q95)`].
+El IC 90 % de esa correlación es [`r num_neg(capa_error$cor_pp_vox_q05)`; `r num_neg(capa_error$cor_pp_vox_q95)`].
 
 Si las encuestas se pasan con uno, se quedan cortas con el otro: fallan más al **repartir** entre PP y VOX que con su suma.
 :::
 
 ::: {.notes}
-- El error se suma al posterior en puntos porcentuales, y después el vector se reescala para sumar 100.
-- La media solo se corrige en el PSOE: en los demás partidos el signo cambia según las elecciones incluidas.
-- Corrijo la mitad porque el *leave-one-out* no valida la corrección completa fuera de muestra.
-- La correlación viene de la matriz `Omega` del post full bayesian, en escala logit. Aquí la aplico a un error en puntos: es una aproximación.
-- Las 3 generales con VOX daban +0,92. Con tan pocas elecciones, ese valor es muy inestable.
+- Uso los draws de `err_new` del full bayesian: el error de una elección nueva, logit(resultado) − logit(voto latente). Hay `r capa_error$n_draws` draws.
+- Cada draw de `err_new` sale de un draw de μ, σ y `Omega`. Así la capa arrastra la incertidumbre de los tres.
+- Las desviaciones en puntos son aproximadas: aplico `err_new` al voto mediano del día E.
+- Antes usaba un error fijo de 5 generales: σ de 1,3 a 2,6 puntos y VOX en 1,3. Con él, P(PP + VOX ≥ 176) daba 98,9 % (encuestas hasta el 6 nov).
+- VOX solo se presentó en 3 de esas 5 generales. Con 44 elecciones, su σ sale más del doble.
 - El BLOQUE lleva un shock propio de 1,5 puntos: es un supuesto, no una estimación.
 :::
 
 ## El error histórico, en código
 
-Cada fila de `d6` es un draw: sumo un error distinto a cada una.
+Cada fila de `d6` es un draw: le sumo un draw distinto del error del full bayesian.
 
 ```{r}
 #| echo: true
 #| eval: false
 #| label: snippet-error
-# PP, PSOE, VOX, SUMAR + Podemos y SALF: errores correlacionados
-e <- MASS::mvrnorm(n_draws, error_mu, Sigma_error)
-d6[, 1:5] <- pmax(d6[, 1:5] + e, 0)
+# err_new del full bayesian, en logit (PP, PSOE, VOX, SUMAR)
+e <- err_new[sample.int(nrow(err_new), n_draws, replace = TRUE), ]
+d6[, 1:4] <- 100 * plogis(qlogis(d6[, 1:4] / 100) + e)
 
 # BLOQUE: shock propio, y vuelta a sumar 100
 d6[, "BLOQUE"] <- pmax(d6[, "BLOQUE"] + rnorm(n_draws, 0, 1.5), 0)
@@ -356,9 +335,10 @@ La capa no reestima nada: solo transforma los draws.
 
 ::: {.notes}
 - `d6` son los draws del modelo 1 en porcentaje, con SUMAR y Podemos sumados en una columna. La historia solo conoce esa suma.
-- `Sigma_error` lleva la correlación PP-VOX de la slide anterior. Sin esa matriz, el error de cada partido sería independiente.
+- Cada fila de `err_new` es un vector de 4 errores de un mismo draw del full bayesian: conserva su correlación.
+- El error va en logit: un partido pequeño no puede bajar de 0.
 - Simplificado: el código real reparte después el error de la suma entre SUMAR y Podemos, con el peso de cada lista en el draw. Por eso el resultado final tiene 14 categorías.
-- Código real: `extraer_shares13()`, en `blog_quarto/2026/10/simular_escanos.R`.
+- Código real: la sección 2b de `R/01_exportar_desde_blog.R`. Sustituye la capa de error de `extraer_shares13()`, de `blog_quarto/2026/10/simular_escanos.R`.
 :::
 
 ## Provincia: la idea
@@ -499,17 +479,15 @@ Usa una media simple de encuestas: prueba las capas de error y de escaños, no e
 
 ::: {.incremental style="margin-top: 0.8em; font-size: 0.85em;"}
 - El modelo estima la **media de las encuestadoras**, no el resultado
-- No calibra el error por casa, y el error agregado sale de 5 elecciones
+- No calibra el error por casa
 - El reparto provincial hereda el 23J
 - No sabemos qué participación supone cada encuestadora
-`r if (estim) paste0("- La covarianza del error es fija. En el modelo único, P(PP + VOX ≥ 176) baja del ", pct_es(mean(with(leer("escanos_draws"), PP + VOX >= 176)), 1), " al 94,6 %")`
+- El error viene del modelo único, pero las encuestas y el reparto provincial no: son dos modelos encadenados
 :::
 
 ::: {.notes}
-- **Covarianza fija:** la capa de error sortea con una sola Σ: las σ de las 5 generales y la correlación PP-VOX en su mediana del *full bayesian*, −0,51. No arrastra la incertidumbre de ninguna de las dos.
-- El *full bayesian* sortea μ, σ y `Omega` en cada draw.
-`r if (estim) "- Da P(PP + VOX ≥ 176) = 94,6 % (\x60vivo/conjunto_mayorias.csv\x60, 4 nov). Su sensibilidad (\x6017_sensibilidad_omega.R\x60) indica que la correlación no es lo principal: con PP-VOX forzada a +0,5 da 90,6 %. La diferencia viene sobre todo de la incertidumbre de σ y μ."`
-- La dejo fija porque se explica mejor: una correlación y unas σ, sin una capa más.
+- **Dos modelos encadenados:** el modelo 1 estima el voto con `brms`. El error histórico sale del *full bayesian* en Stan.
+- El *full bayesian* también estima el voto, pero con otro modelo de encuestas. El [pronóstico vivo](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/seguimiento) usa solo ese modelo.
 :::
 
 ## Un único modelo
@@ -519,7 +497,7 @@ Usa una media simple de encuestas: prueba las capas de error y de escaños, no e
 :::
 
 ::: {.center-text style="font-size: 0.75em;"}
-Más detalle en el post [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian).
+Más detalle en el post [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian) y en el [pronóstico vivo](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/seguimiento), que se actualiza con cada encuesta.
 :::
 
 ::: {.notes}
@@ -528,7 +506,7 @@ Más detalle en el post [full bayesian](https://muestrear-no-es-pecado.es/2026/1
 - **A, generales:** las encuestas `y` miden el voto latente `θ` de cada semana, con el efecto de cada casa `β`. El resultado `r` solo existe para las 5 generales pasadas.
 - **B, autonómicas:** el error de cada encuesta `z` depende de la elección y de la casa. Aporta 39 elecciones.
 - **En medio, lo compartido:** `Ω` es la correlación entre los errores de los partidos. Conecta generales y autonómicas.
-- De aquí sale la correlación PP-VOX de la slide "El error histórico": 5 generales y 39 autonómicas, 44 elecciones.
+- De aquí sale la capa de la slide "El error histórico": 5 generales y 39 autonómicas, 44 elecciones.
 - Para 2026, el error `ε` no se observa: se sortea con el sesgo `μ` y la covarianza `Σ` de las generales.
 - Es una versión simplificada del modelo. El detalle está en el post.
 :::

@@ -20,9 +20,11 @@
 # entre casas. Ver blog_quarto/2026/11/mrp-multiencuesta/GUIA.md, sección
 # "Lección de brms". La sustitución se hace enmascarando add_epred_draws().
 #
-# Segunda diferencia deliberada: simular_escanos.R usa una correlación PP-VOX de
-# +0,5 en la capa de error, a partir de las 3 generales con VOX. Aquí se usa la
-# mediana de Omega del post full bayesian, estimada con 44 elecciones.
+# Segunda diferencia deliberada: la capa de error histórico. simular_escanos.R
+# suma un error normal en puntos, con sigma de 5 generales y una correlación
+# PP-VOX de +0,5. Aquí se usa el error de una elección nueva del full bayesian
+# (err_new, escala logit, 44 elecciones): draws conjuntos de mu, sigma y Omega.
+# La sustitución se hace enmascarando extraer_shares13() (sección 2b).
 
 suppressPackageStartupMessages({
   library(purrr)
@@ -120,21 +122,69 @@ add_epred_draws <- function(newdata, object, ndraws = NULL, re_formula = NULL, .
     pivot_longer(-.draw, names_to = ".category", values_to = ".epred")
 }
 
-# ---- 2b. correlación PP-VOX de la capa de error --------------------------------
+# ---- 2b. capa de error del full bayesian ----------------------------------------
 
-cor_pp_vox_pipeline <- R_error["PP", "VOX"]
+# err_new = logit(resultado) - logit(voto latente) de una elección nueva, para
+# PP, PSOE, VOX y SUMAR + PODEMOS (grupos_error de full-bayesian/11_datos_conjunto.R).
+# Cada draw trae su mu, su sigma y su Omega. El fit no va a git: sus draws se
+# copian a data/ para poder repetir la exportación en otro equipo.
+f_fit_fb <- here::here("2026/10/full-bayesian/vivo/fit_conjunto.rds")
+f_err_fb <- ruta_data("err_new_full_bayesian.csv")
+grupos_error_fb <- c("PP", "PSOE", "VOX", "SUMAR")
+if (file.exists(f_fit_fb)) {
+  err_fb <- posterior::as_draws_matrix(readRDS(f_fit_fb)$draws("err_new"))
+  err_fb <- matrix(unclass(err_fb), nrow(err_fb), dimnames = list(NULL, grupos_error_fb))
+  readr::write_csv(as_tibble(err_fb), f_err_fb)
+  fecha_fit_fb <- file.mtime(f_fit_fb)
+} else {
+  log_paso("2b. AVISO: no está ", f_fit_fb, "; uso ", f_err_fb)
+  err_fb <- as.matrix(readr::read_csv(f_err_fb, show_col_types = FALSE))
+  fecha_fit_fb <- NA
+}
+stopifnot(identical(colnames(err_fb), grupos_error_fb), nrow(err_fb) >= 1000)
+
+# error de la versión del blog, para comparar en las notas
+error_pipeline <- list(mu = error_mu, sigma = error_sigma, cor_pp_vox = R_error["PP", "VOX"])
+
+# Misma secuencia que la capa de error de extraer_shares13() (error, shock del
+# BLOQUE, reescalado a 100), pero con el error en logit. Se aplica a la salida
+# sin error: SUMAR y PODEMOS reciben el error de su suma en proporción a su
+# peso, y las 8 subceldas del BLOQUE, el shock del BLOQUE en proporción a su
+# peso. Es lo mismo que hace extraer_shares13() antes de repartir.
+extraer_shares13_original <- extraer_shares13
+n_sustituciones_error <- 0L
+extraer_shares13 <- function(n_draws, time_obj, con_error, sigma_bloque,
+                             cor_bloque, t_sigma_df, f_antelacion, listas) {
+  out <- extraer_shares13_original(
+    n_draws, time_obj, FALSE, sigma_bloque, cor_bloque, t_sigma_df,
+    f_antelacion, listas
+  )
+  if (!con_error) {
+    return(out)
+  }
+  stopifnot(listas == "separadas", is.null(t_sigma_df), f_antelacion == 1, cor_bloque == 0)
+  n_sustituciones_error <<- n_sustituciones_error + 1L
+  e <- err_fb[sample.int(nrow(err_fb), n_draws, replace = TRUE), ]
+  g <- cbind(out[, c("PP", "PSOE", "VOX")], SUMAR = out[, "SUMAR"] + out[, "PODEMOS"])
+  g_new <- 100 * plogis(qlogis(g / 100) + e)
+  b <- rowSums(out[, fams_bloque])
+  b_new <- pmax(b + sigma_bloque * rnorm(n_draws), 0)
+  res <- out
+  res[, c("PP", "PSOE", "VOX")] <- g_new[, c("PP", "PSOE", "VOX")]
+  res[, c("SUMAR", "PODEMOS")] <- out[, c("SUMAR", "PODEMOS")] * (g_new[, "SUMAR"] / g[, "SUMAR"])
+  res[, fams_bloque] <- out[, fams_bloque] * (b_new / b)
+  100 * res / rowSums(res)
+}
+
 omega_pp_vox <- readr::read_csv(
   here::here("2026/10/full-bayesian/conjunto_parametros.csv"),
   show_col_types = FALSE
 ) |>
   filter(parametro == "Omega", partido == "VOX-PP")
 stopifnot(nrow(omega_pp_vox) == 1)
-R_error["PP", "VOX"] <- R_error["VOX", "PP"] <- omega_pp_vox$mediana
-Sigma_error <- outer(error_sigma, error_sigma) * R_error
-stopifnot(all(eigen(Sigma_error[1:4, 1:4])$values > 0))
 log_paso(
-  "2b. correlación PP-VOX: ", round(cor_pp_vox_pipeline, 2), " -> ",
-  round(omega_pp_vox$mediana, 2)
+  "2b. capa de error: err_new del full bayesian, ", nrow(err_fb), " draws",
+  " (fit del ", format(fecha_fit_fb, "%Y-%m-%d %H:%M"), ")"
 )
 
 # ---- 3. simulación principal ----------------------------------------------------
@@ -144,6 +194,7 @@ set.seed(2911)
 sim <- simular(n_draws = 6000, listas = "mapa", provincial = TRUE)
 stopifnot(
   n_sustituciones >= 1L,
+  n_sustituciones_error >= 1L,
   all(rowSums(sim$draws[, setdiff(names(sim$draws), ".draw")]) == 350)
 )
 log_paso("   sustituciones del epred: ", n_sustituciones, "; todos los draws suman 350")
@@ -313,14 +364,23 @@ saveRDS(candidaturas, ruta_out("candidaturas.rds"))
 
 # ---- 8. constantes, datos y procedencia -----------------------------------------
 
+# error en puntos que da err_new aplicado a la mediana del voto del día E
+# (sin capas): solo para describirlo en las slides
+p_e <- apply(epred_e, 2, median)
+p_e <- c(p_e[c("PP", "PSOE", "VOX")], SUMAR = sum(p_e[c("SUMAR", "PODEMOS")])) / 100
+err_pp <- 100 * (plogis(sweep(err_fb, 2, qlogis(p_e), "+")) - matrix(p_e, nrow(err_fb), 4, byrow = TRUE))
 saveRDS(
   list(
-    mu = error_mu,
-    sigma = error_sigma,
-    cor_pp_vox = R_error["PP", "VOX"],
+    fuente = "err_new del full bayesian",
+    n_draws = nrow(err_fb),
+    fecha_fit = fecha_fit_fb,
+    mu_pp = colMeans(err_pp),
+    sigma_pp = apply(err_pp, 2, sd),
+    cor_pp_vox_draws = cor(err_fb[, "PP"], err_fb[, "VOX"]),
+    cor_pp_vox = omega_pp_vox$mediana,
     cor_pp_vox_q05 = omega_pp_vox$q05,
     cor_pp_vox_q95 = omega_pp_vox$q95,
-    cor_pp_vox_pipeline = cor_pp_vox_pipeline,
+    pipeline = error_pipeline,
     sigma_bloque = 1.5
   ),
   ruta_out("capa_error.rds")
