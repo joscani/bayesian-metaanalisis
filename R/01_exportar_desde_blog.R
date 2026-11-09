@@ -7,6 +7,11 @@
 #   cd ~/proyectos/blog_quarto
 #   Rscript ../bayesian-metaanalisis/R/01_exportar_desde_blog.R
 #   Rscript ../bayesian-metaanalisis/R/01_exportar_desde_blog.R --sin-refit
+#   Rscript ../bayesian-metaanalisis/R/01_exportar_desde_blog.R --sin-comprobar-tau
+#
+# --sin-comprobar-tau salta el paso 0, que descarga resultados de Interior.
+# Úsalo solo si esa descarga falla (p. ej. HTTP 403, 9 nov 2026). Queda
+# anotado en el log y en procedencia.rds.
 #
 # Los fits se guardan en models/ de este repo. No se escribe nada en el blog.
 #
@@ -28,6 +33,7 @@ suppressPackageStartupMessages({
 
 args <- commandArgs(trailingOnly = TRUE)
 sin_refit <- "--sin-refit" %in% args
+sin_comprobar_tau <- "--sin-comprobar-tau" %in% args
 dir_repo <- normalizePath(Sys.getenv("SLIDES_REPO", "../bayesian-metaanalisis"))
 stopifnot(
   file.exists(here::here("2026/10/simular_escanos.R")),
@@ -50,17 +56,21 @@ source(here::here("2026/10/simular_escanos.R"))
 # electorales. Ese script no escribe nada si los ficheros existen y coinciden;
 # si alguno falta o difiere, aquí se para.
 
-log_paso("0. ajustar_tau_shock.R: compruebo que los tau del blog se reproducen")
-salida_tau <- suppressWarnings(system2(
-  "Rscript",
-  here::here("2026/10/ajustar_tau_shock.R"),
-  stdout = TRUE,
-  stderr = TRUE
-))
-if (!is.null(attr(salida_tau, "status")) ||
-  sum(grepl("^reproducido", salida_tau)) != 5) {
-  cat(salida_tau, sep = "\n")
-  stop("los tau del blog no se reproducen: revisa 2026/10/ajustar_tau_shock.R")
+if (sin_comprobar_tau) {
+  log_paso("0. AVISO: --sin-comprobar-tau, uso los tau del blog sin comprobarlos")
+} else {
+  log_paso("0. ajustar_tau_shock.R: compruebo que los tau del blog se reproducen")
+  salida_tau <- suppressWarnings(system2(
+    "Rscript",
+    here::here("2026/10/ajustar_tau_shock.R"),
+    stdout = TRUE,
+    stderr = TRUE
+  ))
+  if (!is.null(attr(salida_tau, "status")) ||
+    sum(grepl("^reproducido", salida_tau)) != 5) {
+    cat(salida_tau, sep = "\n")
+    stop("los tau del blog no se reproducen: revisa 2026/10/ajustar_tau_shock.R")
+  }
 }
 
 # ---- 1. modelos, en models/ de este repo --------------------------------------
@@ -333,10 +343,27 @@ file.copy(
   overwrite = TRUE
 )
 
+# entregas de trackings que quitar_tracking_solapado() deja fuera (ajustar_meta.R).
+# 02_figuras.R las quita de las tablas de encuestas, y 04_comprobar.R las suma
+# al contar encuestas, para que la regla no parezca una pérdida de datos
+tracking_fuera <- function(f, modelo) {
+  d <- readr::read_csv(f, show_col_types = FALSE) |>
+    distinct(encuestadora, campo, enlace, fecha)
+  invisible(capture.output(r <- quitar_tracking_solapado(d)))
+  anti_join(d, r, by = c("encuestadora", "campo", "enlace")) |>
+    mutate(modelo = modelo, .before = 1)
+}
+fuera_tracking <- bind_rows(
+  tracking_fuera(f_grande_sep, "m1"),
+  tracking_fuera(f_bloque, "m2")
+)
+saveRDS(fuera_tracking, ruta_out("tracking_fuera.rds"))
+
 git_blog <- function(...) system2("git", c("-C", here::here(), ...), stdout = TRUE)
 procedencia <- list(
   blog_commit = git_blog("rev-parse", "--short", "HEAD"),
   blog_cambios_2026_10 = git_blog("status", "--short", "--", "2026/10"),
+  tau_comprobado = !sin_comprobar_tau,
   tau_md5 = tools::md5sum(here::here(
     "2026/10",
     c("mod_tau_shock.rds", "tau_shock_draws.csv", "tau_regionales.csv")
@@ -348,6 +375,8 @@ procedencia <- list(
   n_casas_m1 = n_distinct(dat_g$encuestadora),
   n_encuestas_m2 = nrow(dat_b),
   n_casas_m2 = n_distinct(dat_b$encuestadora),
+  n_tracking_fuera_m1 = sum(fuera_tracking$modelo == "m1"),
+  n_tracking_fuera_m2 = sum(fuera_tracking$modelo == "m2"),
   brms = as.character(packageVersion("brms")),
   cmdstan = as.character(cmdstanr::cmdstan_version())
 )

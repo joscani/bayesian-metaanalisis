@@ -10,6 +10,9 @@
 # equipo parta del mismo estado. Lo que el blog ya tenía sin commit no se toca.
 #   scripts/actualizar.sh --sin-descargar    # usa los CSV que ya hay en el blog
 #   scripts/actualizar.sh --forzar           # reajusta aunque no haya cambios
+#   scripts/actualizar.sh --sin-comprobar-tau
+#       no comprueba que los tau del blog se reproducen (esa comprobación
+#       descarga resultados de Interior; úsalo solo si la descarga falla)
 #
 # Condición previa: blog_quarto y este repo en la misma carpeta.
 #
@@ -23,11 +26,13 @@ FECHA_CORTE="2026-11-22"
 publicar=true
 descargar=true
 forzar=false
+args_export=()
 for arg in "$@"; do
   case "$arg" in
     --sin-publicar) publicar=false ;;
     --sin-descargar) descargar=false ;;
     --forzar) forzar=true ;;
+    --sin-comprobar-tau) args_export+=(--sin-comprobar-tau) ;;
     *) echo "Argumento desconocido: $arg" >&2; exit 2 ;;
   esac
 done
@@ -113,7 +118,7 @@ previa="$(mktemp)"
 cp "$repo/outputs/procedencia.rds" "$previa"
 
 paso "2/5 Ajusta y exporta (unos 4 min)"
-(cd "$blog" && SLIDES_REPO="$repo" Rscript "$repo/R/01_exportar_desde_blog.R")
+(cd "$blog" && SLIDES_REPO="$repo" Rscript "$repo/R/01_exportar_desde_blog.R" ${args_export[@]+"${args_export[@]}"})
 
 paso "3/5 Construye figuras"
 (cd "$repo" && Rscript R/02_figuras.R)

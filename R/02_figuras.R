@@ -553,12 +553,19 @@ guardar_fig(fig_ranef_vox, "fig_ranef_vox")
 
 ## ---- 10. Tablas de encuestas -----------------------------------------------------
 
-# mismos filtros que prep_grande() y prep_bloque() de blog_quarto/2026/10/ajustar_meta.R
+# mismos filtros que prep_grande() y prep_bloque() de blog_quarto/2026/10/ajustar_meta.R.
+# Las entregas solapadas de los trackings las calcula 01_exportar_desde_blog.R
+# con la función del blog, para no repetir la regla aquí
+fuera_tracking <- readRDS(here("outputs", "tracking_fuera.rds"))
+quitar_fuera <- function(d, m) {
+  anti_join(d, filter(fuera_tracking, modelo == m), by = c("encuestadora", "campo", "enlace"))
+}
 enlace_html <- function(casa, enlace) sprintf('<a href="%s" target="_blank">%s</a>', enlace, casa)
 
 g <- read_csv(here("data", "encuestas_meta_grande_sep.csv"), show_col_types = FALSE) |>
   filter(!is.na(muestra), !encuestadora %in% c("CIS", "ElectoPanel")) |>
-  distinct(encuestadora, campo, enlace, categoria, .keep_all = TRUE)
+  distinct(encuestadora, campo, enlace, categoria, .keep_all = TRUE) |>
+  quitar_fuera("m1")
 tabla_m1 <- g |>
   select(encuestadora, campo, fecha, muestra, enlace, categoria, pct) |>
   pivot_wider(names_from = categoria, values_from = pct) |>
@@ -573,7 +580,8 @@ stopifnot(nrow(tabla_m1) == procedencia$n_encuestas_m1)
 saveRDS(tabla_m1, here("outputs", "tabla_encuestas_m1.rds"))
 
 b <- read_csv(here("data", "encuestas_meta_bloque.csv"), show_col_types = FALSE) |>
-  distinct(encuestadora, campo, enlace, subcela, .keep_all = TRUE)
+  distinct(encuestadora, campo, enlace, subcela, .keep_all = TRUE) |>
+  quitar_fuera("m2")
 tabla_m2 <- b |>
   select(encuestadora, campo, fecha, muestra, enlace, bloque_pct, subcela, pct) |>
   pivot_wider(names_from = subcela, values_from = pct) |>

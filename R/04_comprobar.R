@@ -31,14 +31,22 @@ exige(
   "todos los draws suman 350 escaños"
 )
 exige(abs(sum(prob$prob) - 1) < 1e-8, "las probabilidades de mayoría suman 1")
-exige(
-  proc$n_encuestas_m1 >= previa$n_encuestas_m1,
-  sprintf("modelo 1: de %d a %d encuestas", previa$n_encuestas_m1, proc$n_encuestas_m1)
-)
-exige(
-  proc$n_encuestas_m2 >= previa$n_encuestas_m2,
-  sprintf("modelo 2: de %d a %d encuestas", previa$n_encuestas_m2, proc$n_encuestas_m2)
-)
+# encuestas antes de quitar las entregas solapadas de los trackings: la regla
+# de ajustar_meta.R puede bajar el número, pero lo descargado no debe bajar.
+# Una procedencia anterior al 9 nov 2026 no tiene el campo: cuenta 0
+con_tracking <- function(p, m) {
+  p[[paste0("n_encuestas_", m)]] + (p[[paste0("n_tracking_fuera_", m)]] %||% 0L)
+}
+for (m in c("m1", "m2")) {
+  exige(
+    con_tracking(proc, m) >= con_tracking(previa, m),
+    sprintf(
+      "modelo %s: de %d a %d encuestas (%d entregas de trackings fuera)",
+      sub("m", "", m), previa[[paste0("n_encuestas_", m)]],
+      proc[[paste0("n_encuestas_", m)]], proc[[paste0("n_tracking_fuera_", m)]] %||% 0L
+    )
+  )
+}
 exige(
   proc$ultima_encuesta <= Sys.Date(),
   sprintf("última encuesta %s, no posterior a hoy", format(proc$ultima_encuesta))

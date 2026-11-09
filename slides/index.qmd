@@ -121,6 +121,7 @@ La materia prima son las encuestas publicadas (y vienen sin los microdatos)
 - Fuentes: [ciento76](https://www.ciento76.es/encuestas) y [objetivo176](https://objetivo176.es/encuestas)
 - Solo encuestas con **tamaño muestral publicado**
 - Sin CIS ni ElectoPanel en el modelo de los grandes. Decisión mía 
+- Trackings que acumulan (SW Demoscopia, SocioMétrica): solo la entrega más reciente de campos solapados. Cada entrevistado cuenta una vez
 - Modelo 1: **`r procedencia$n_encuestas_m1` encuestas de `r procedencia$n_casas_m1` casas**, hasta el `r corte`
 - Modelo 2: **`r procedencia$n_encuestas_m2` encuestas de `r procedencia$n_casas_m2` casas**, desde junio de 2025
 
