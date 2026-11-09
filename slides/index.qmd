@@ -2,7 +2,10 @@
 title: "De la encuesta al escaño"
 subtitle: "Un flujo de trabajo bayesiano en R para la agregación electoral e incertidumbre provincial"
 author: "José Luis Cañadas Reche"
-institute: "Jornadas de R de Canarias"
+institute:
+  - "Jornadas de R de Canarias"
+  # fecha del último ajuste (scripts/actualizar.sh), no la de la charla
+  - "Actualizado el `r format(readRDS(here::here('outputs', 'procedencia.rds'))$fecha_ejecucion, '%d/%m/%Y')`"
 date: 2026-11-25
 date-format: long
 lang: es
