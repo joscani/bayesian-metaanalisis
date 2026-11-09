@@ -1,0 +1,15 @@
+{
+  // Colores solo para esta ventana: distinguen este proyecto de otras
+  // ventanas de Positron. El tema no cambia.
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#7a2e8e",
+    "titleBar.activeForeground": "#ffffff",
+    "titleBar.inactiveBackground": "#5a2269",
+    "titleBar.inactiveForeground": "#e0d0e6",
+    "activityBar.background": "#7a2e8e",
+    "activityBar.foreground": "#ffffff",
+    "activityBar.inactiveForeground": "#d8c2e0",
+    "statusBar.background": "#7a2e8e",
+    "statusBar.foreground": "#ffffff"
+  }
+}
