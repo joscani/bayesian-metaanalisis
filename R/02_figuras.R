@@ -345,7 +345,11 @@ resumen_canarias <- canarias |>
     p_escano = mean(escanos >= 1),
     .groups = "drop"
   ) |>
-  filter(media >= 0.02)
+  # filtro por partido, no por provincia: un partido que compite en las dos
+  # provincias sale en las dos, aunque en una tenga 0 escaños (CC en Las Palmas)
+  group_by(partido) |>
+  filter(max(media) >= 0.02) |>
+  ungroup()
 saveRDS(resumen_canarias, here("outputs", "resumen_canarias.rds"))
 
 niveles_can <- resumen_canarias |>
