@@ -22,6 +22,7 @@ No sé si una charla técnica o una URL pública entran en esa prohibición. Pre
 Para no depender de esa respuesta, el plan incluye:
 
 - **Último corte de encuestas:** 22 nov, con publicación como tarde el 23 nov. Pages no se toca del 24 al 28 nov.
+  - *Actualización del 17 nov:* el autor lo consultó. Agregar encuestas ya publicadas no es difundir sondeos nuevos. Se quitan los bloqueos de fecha de `scripts/actualizar.sh` y `scripts/publicar.sh`.
 - **Versión sin estimación:** un parámetro de Quarto (`estimacion_29n: false`) oculta las slides con cifras del 29N. El método y el backtest se mantienen.
 
 ## 1. Conservar lo actual

@@ -8,6 +8,9 @@ models/*.exe
 _site/
 slides/index.html
 slides/index-offline.html
+slides/corta.html
+slides/corta-offline.html
+slides/corta_files/
 slides/index_files/
 slides/.quarto/
 

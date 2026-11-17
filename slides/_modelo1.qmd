@@ -1,0 +1,32 @@
+## Modelo 1
+
+Modelo **multinomial bayesiano** con `brms`: cada encuesta aporta un vector de votos.
+
+```{r}
+#| echo: true
+#| eval: false
+#| label: snippet-modelo
+form <- brmsformula(
+  cell_counts | trials(n) ~ time + (1 | encuestadora)
+)
+brm(form, dat, multinomial(),
+    prior = priors_multinomial(form, dat),
+    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
+    control = list(adapt_delta = 0.95, max_treedepth = 12))
+```
+
+::: {.incremental}
+- `(1 | encuestadora)`: el **efecto casa**, sin pendiente propia
+- `time`: días desde el 1 de julio; una tendencia común por partido
+- En Andalucía era `(time | empresa)`: con pocas encuestas por casa, no se aprende
+:::
+
+::: {.notes}
+- `cell_counts` es una matriz con una columna por categoría: los votos de cada encuesta, porcentaje publicado por tamaño muestral.
+- `trials(n)` indica el total de cada fila. Así, una encuesta con más muestra pesa más.
+- El multinomial usa el PP como referencia: cada categoría se modela en log-odds frente al PP, que no tiene ecuación propia.
+- `time` da una pendiente por categoría, común a todas las casas.
+- `(1 | encuestadora)` da un intercepto por casa y por categoría. Las casas con pocas encuestas se encogen hacia 0.
+- Los efectos casa están centrados en 0: el modelo estima la media de las encuestadoras, no el resultado.
+- `init = 0.1`, `adapt_delta = 0.95` y `max_treedepth = 12` hacen el muestreo más prudente, a cambio de más tiempo.
+:::

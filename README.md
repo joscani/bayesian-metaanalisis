@@ -13,6 +13,7 @@ provincial y las candidaturas registradas en cada provincia.
 
 - Portada: <https://joscani.github.io/bayesian-metaanalisis/>
 - Generales del 29N: <https://joscani.github.io/bayesian-metaanalisis/generales/>
+- Generales del 29N, versión corta (15 minutos): <https://joscani.github.io/bayesian-metaanalisis/generales/corta.html>
 - Andaluzas de mayo: <https://joscani.github.io/bayesian-metaanalisis/andalucia/>
 
 El código de la versión de Andalucía está en la rama y la etiqueta `andalucia-2026`.
@@ -24,7 +25,7 @@ data/       CSV copiados del blog: encuestas, backtests y candidaturas
 R/          scripts de cómputo y figuras
 models/     fits de brms, no versionados
 outputs/    resultados y figuras ya construidos
-slides/     documento Quarto revealjs, partes opcionales (_*.qmd) y tema
+slides/     index.qmd (extensa), corta.qmd (15 min), partials (_*.qmd), _setup.R y tema
 scripts/    publicación en GitHub Pages
 ```
 
@@ -32,6 +33,11 @@ Las slides no computan nada: solo hacen `readRDS()` y pintan. El modelo no se
 copia aquí: `R/01_exportar_desde_blog.R` llama al código de
 [`blog_quarto/2026/10`](https://github.com/joscani/blog_quarto/tree/master/2026/10).
 `outputs/procedencia.rds` guarda el commit del blog y la fecha de la última encuesta.
+
+**Dos versiones.** `slides/index.qmd` es la extensa y `slides/corta.qmd`, la de
+15 minutos. Las slides que comparten están en partials (`_flujo.qmd`, `_modelo1.qmd`,
+`_draws.qmd`, `_error.qmd`, `_provincia_brms.qmd`, `_res_*.qmd`, `_mayorias.qmd`):
+se editan una vez. El setup común está en `slides/_setup.R`.
 
 Los tau del reparto provincial también vienen del blog. Antes de simular,
 `R/01_exportar_desde_blog.R` ejecuta `2026/10/ajustar_tau_shock.R` y se para si
@@ -62,8 +68,7 @@ comprueba convergencia con `R/04_comprobar.R`. Solo publica si todo pasa.
 También hace commit y push en `blog_quarto` de los ficheros que cambian durante
 la ejecución, como las encuestas descargadas. Lo que el blog ya tenía sin commit
 no se toca.
-Con `--sin-publicar` no confirma ni publica nada. Los datos se congelan el
-22 de noviembre.
+Con `--sin-publicar` no confirma ni publica nada.
 
 Los pasos, por separado:
 
@@ -94,17 +99,19 @@ Los pasos, por separado:
 ## Publicar en GitHub Pages
 
 Pages sirve la rama `gh-pages`, con una subcarpeta por charla.
-`scripts/publicar.sh` solo sustituye `generales/`.
+`scripts/publicar.sh` solo sustituye `generales/`. Publica la extensa
+(`generales/index.html`) y la corta (`generales/corta.html`).
 
 No uses `quarto publish gh-pages`: su código ejecuta `git rm -r .` en esa rama.
 
 ## Periodo del 24 al 28 de noviembre
 
 El art. 69.7 de la LOREG prohíbe publicar, difundir o reproducir sondeos
-electorales en los cinco días anteriores a la votación. `scripts/publicar.sh` se
-niega a publicar en esas fechas.
+electorales en los cinco días anteriores a la votación. Consultado el caso, estas
+slides agregan encuestas ya publicadas y no difunden sondeos nuevos. Por eso los
+scripts no bloquean el reajuste ni la publicación en esas fechas.
 
-Esta versión oculta las slides con encuestas o estimaciones del 29N:
+Si hiciera falta, esta versión oculta las slides con encuestas o estimaciones del 29N:
 
 ```bash
 quarto render slides/index.qmd -P estimacion_29n:false
@@ -120,3 +127,10 @@ quarto render index.qmd --to revealjs -M embed-resources:true -o index-offline.h
 ```
 
 Genera `slides/index-offline.html`, un único HTML de unos 5,7 MB que funciona sin red. No se versiona.
+
+La versión corta, igual:
+
+```bash
+cd slides
+quarto render corta.qmd --to revealjs -M embed-resources:true -o corta-offline.html
+```

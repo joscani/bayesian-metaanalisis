@@ -1,0 +1,24 @@
+## El error histórico
+
+Lo estima el modelo [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian): 5 generales y 39 autonómicas, **44 elecciones**.
+
+::: {.incremental}
+- Cada draw trae su propio sesgo, su desviación y su correlación: **no hay valores fijos**
+- Desviación típica del error, en puntos: PP `r num_es(capa_error$sigma_pp[["PP"]], 1)`, PSOE `r num_es(capa_error$sigma_pp[["PSOE"]], 1)`, VOX `r num_es(capa_error$sigma_pp[["VOX"]], 1)`
+- **Correlación entre el error con PP y el error con VOX: `r num_neg(capa_error$cor_pp_vox)`**
+:::
+
+::: {.callout .fragment style="margin-top: 1em;"}
+El IC 90 % de esa correlación es [`r num_neg(capa_error$cor_pp_vox_q05)`; `r num_neg(capa_error$cor_pp_vox_q95)`].
+
+Si las encuestas se pasan con uno, se quedan cortas con el otro: fallan más al **repartir** entre PP y VOX que con su suma.
+:::
+
+::: {.notes}
+- Uso los draws de `err_new` del full bayesian: el error de una elección nueva, logit(resultado) − logit(voto latente). Hay `r capa_error$n_draws` draws.
+- Cada draw de `err_new` sale de un draw de μ, σ y `Omega`. Así la capa arrastra la incertidumbre de los tres.
+- Las desviaciones en puntos son aproximadas: aplico `err_new` al voto mediano del día E.
+- Antes usaba un error fijo de 5 generales: σ de 1,3 a 2,6 puntos y VOX en 1,3. Con él, P(PP + VOX ≥ 176) daba 98,9 % (encuestas hasta el 6 nov).
+- VOX solo se presentó en 3 de esas 5 generales. Con 44 elecciones, su σ sale más del doble.
+- El BLOQUE lleva un shock propio de 1,5 puntos: es un supuesto, no una estimación.
+:::

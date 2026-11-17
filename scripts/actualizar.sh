@@ -16,12 +16,9 @@
 #
 # Condición previa: blog_quarto y este repo en la misma carpeta.
 #
-# Fecha de corte: LOREG art. 69.7 prohíbe publicar sondeos del 24 al 28 de
-# noviembre. Los datos se congelan el domingo 22 y scripts/publicar.sh deja de
-# publicar el lunes 23 por la noche. La decisión legal no la toma este script.
+# Sin fecha de corte: el autor consultó la LOREG (art. 69.7) y agregar encuestas
+# ya publicadas no es difundir sondeos nuevos. Se reajusta hasta el 29N.
 set -euo pipefail
-
-FECHA_CORTE="2026-11-22"
 
 publicar=true
 descargar=true
@@ -42,10 +39,6 @@ blog="$(dirname "$repo")/blog_quarto"
 [[ -d "$blog/2026/10" ]] || { echo "No encuentro $blog" >&2; exit 1; }
 
 hoy="$(date +%F)"
-if [[ "$hoy" > "$FECHA_CORTE" ]]; then
-  echo "Bloqueado: los datos están congelados desde el $FECHA_CORTE." >&2
-  exit 1
-fi
 
 rama="$(git -C "$repo" branch --show-current)"
 if [[ "$rama" == "andalucia-2026" ]]; then

@@ -1,0 +1,6 @@
+## Resultado: el resto
+
+```{r}
+#| label: g-fig-ridges-resto
+leer_fig("fig_ridges_resto")
+```

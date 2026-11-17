@@ -1,0 +1,134 @@
+---
+title: "De la encuesta al escaño"
+subtitle: "Un flujo de trabajo bayesiano en R para la agregación electoral e incertidumbre provincial"
+author: "José Luis Cañadas Reche"
+institute:
+  - "Jornadas de R de Canarias"
+  # fecha del último ajuste (scripts/actualizar.sh), no la de la charla
+  - "Actualizado el `r format(readRDS(here::here('outputs', 'procedencia.rds'))$fecha_ejecucion, '%d/%m/%Y')`"
+date: 2026-11-25
+date-format: long
+lang: es
+format:
+  revealjs:
+    theme: [default, theme-jrc.scss]
+    fig-format: svg
+    slide-level: 2
+params:
+  estimacion_29n: true
+execute:
+  echo: false
+  warning: false
+  message: false
+knitr:
+  opts_chunk:
+    fig.width: 10
+    fig.height: 5.5
+---
+
+```{r}
+#| label: setup
+# Versión corta (15 minutos) de slides/index.qmd.
+# Las slides compartidas son partials (_flujo.qmd, _modelo1.qmd, ...): se editan
+# una vez y cambian en las dos versiones. Aquí solo están las slides propias.
+source(here::here("slides", "_setup.R"), local = TRUE)
+```
+
+## El problema
+
+Las encuestas dan **porcentajes**. El Congreso reparte **escaños**.
+
+::: {.incremental}
+- 350 escaños, repartidos en **52 circunscripciones**
+- Cada provincia aplica **D'Hondt** con barrera del 3 %
+- Un mismo % nacional puede dar mayorías muy distintas
+:::
+
+::: {.fragment}
+**La pregunta real no es "¿qué % saca el PP?"**, es *"¿qué probabilidad tiene cada reparto de escaños?"*
+
+Con un enfoque bayesiano no perseguimos **el número**, sino **la distribución completa**.
+:::
+
+```{r, child="_flujo.qmd"}
+```
+
+## Las encuestas
+
+```{r}
+#| label: g-fig-encuestas-tiempo
+#| fig-height: 4.4
+#| include: !expr estim
+leer_fig("fig_encuestas_tiempo")
+```
+
+::: {style="font-size: 0.7em;"}
+- [ciento76](https://www.ciento76.es/encuestas) y [objetivo176](https://objetivo176.es/encuestas), solo con **tamaño muestral publicado**
+- Modelo 1: **`r procedencia$n_encuestas_m1` encuestas de `r procedencia$n_casas_m1` casas**, hasta el `r corte`. Sin CIS ni ElectoPanel
+:::
+
+::: {.notes}
+- Trackings que acumulan (SW Demoscopia, SocioMétrica): solo la entrega más reciente de campos solapados.
+- La mayoría de encuestas no publica PNV, BNG o Junts. El modelo 1 los agrupa en un BLOQUE y un modelo 2 reparte el BLOQUE entre 8 subceldas, con `r procedencia$n_encuestas_m2` encuestas desde junio de 2025.
+:::
+
+```{r, child="_modelo1.qmd"}
+```
+
+```{r, child="_draws.qmd"}
+```
+
+```{r, child="_error.qmd"}
+```
+
+```{r, child="_provincia_brms.qmd"}
+```
+
+```{r, child=if (estim) "_res_grandes.qmd"}
+```
+
+```{r, child=if (estim) "_res_canarias.qmd"}
+```
+
+```{r, child=if (estim) "_mayorias.qmd"}
+```
+
+## Limitaciones y un único modelo
+
+::: {.callout style="font-size: 0.75em;"}
+**Según Virgilio Gómez Rubio**: lo correcto sería meter toda la incertidumbre en un único modelo.
+:::
+
+::: {style="font-size: 0.7em;"}
+- El modelo estima la **media de las encuestadoras**, no el resultado
+- El reparto provincial hereda el 23J
+- Lo he intentado en Stan: el [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian) y su [pronóstico vivo](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/seguimiento)
+:::
+
+::: {.center-text}
+![](`r knitr::image_uri(here("slides", "dag_modelo.svg"))`){fig-alt="DAG simplificado del modelo conjunto: generales a la izquierda, autonómicas a la derecha y, en medio, las matrices de covarianza que comparten." width="72%"}
+:::
+
+::: {.notes}
+- Más limitaciones en la versión extensa: no calibra el error por casa y no sabemos qué participación supone cada encuestadora.
+- El error viene del modelo único, pero las encuestas y el reparto provincial no: son dos modelos encadenados.
+- DAG: gris es dato, blanco es parámetro. A la izquierda, generales; a la derecha, autonómicas; en medio, `Ω`, la correlación entre los errores de los partidos, que comparten.
+- De ese modelo sale la capa de "El error histórico": 5 generales y 39 autonómicas, 44 elecciones.
+:::
+
+## Gracias
+
+::: {.center-text style="margin-top: 1.5em;"}
+Una foto de las encuestas, no una predicción del domingo.
+
+`github.com/joscani/bayesian-metaanalisis`
+
+::: {style="font-size: 0.6em; margin-top: 1.2em; color: #666;"}
+*Muestrear no es pecado*:
+[Voto](https://muestrear-no-es-pecado.es/2026/10/meta-analisis-generales-jlcr) ·
+[Escaños](https://muestrear-no-es-pecado.es/2026/10/meta-analisis-generales-escanos-jlcr) ·
+[Candidaturas](https://muestrear-no-es-pecado.es/2026/10/frente_amplio_y_adelante_andalucia/frente_amplio_y_adelante_andalucia)
+
+**[Versión extensa, con más detalle y material extra](index.html)**
+:::
+:::

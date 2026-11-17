@@ -1,0 +1,23 @@
+## El flujo en una imagen
+
+La materia prima son las encuestas publicadas (y vienen sin los microdatos)
+
+::: {.center-text style="font-size: 0.72em; line-height: 1.75;"}
+**Encuestas**
+
+⬇ *dos modelos brms en cascada*
+
+**Posterior nacional de 14 categorías**
+
+⬇ *+ error histórico de las encuestas*
+
+**Posterior ajustado**
+
+⬇ *+ reparto provincial con dos efectos + candidaturas de cada provincia*
+
+**Posterior provincial**
+
+⬇ *D'Hondt, provincia a provincia*
+
+**Distribución posterior de escaños**
+:::

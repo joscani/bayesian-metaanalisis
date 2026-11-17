@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Publica las slides de generales en la subcarpeta generales/ de la rama gh-pages.
+# Publica las slides de generales (extensa y corta) en la subcarpeta generales/
+# de la rama gh-pages.
 # Solo sustituye generales/: andalucia/ y la portada no se tocan.
 #
 #   scripts/publicar.sh            # renderiza, copia, confirma y sube
@@ -20,17 +21,15 @@ for arg in "$@"; do
   esac
 done
 
+# sin bloqueo del 24 al 28 de noviembre: ver la cabecera de scripts/actualizar.sh
 fecha_hoy="$(date +%F)"
-if [[ "$fecha_hoy" > "2026-11-23" && "$fecha_hoy" < "2026-11-29" ]]; then
-  echo "Bloqueado: del 24 al 28 de noviembre Pages no se toca (LOREG art. 69.7)." >&2
-  exit 1
-fi
 
 cd "$repo"
 # sin restos de renders anteriores: index_files se copia entero a la rama
 if $renderizar; then
-  rm -rf slides/index_files
+  rm -rf slides/index_files slides/corta_files
   quarto render slides/index.qmd
+  quarto render slides/corta.qmd
 fi
 
 worktree="$(mktemp -d)"
@@ -42,6 +41,9 @@ rm -rf "$worktree/generales"
 mkdir -p "$worktree/generales"
 cp slides/index.html "$worktree/generales/"
 cp -R slides/index_files "$worktree/generales/"
+# versión corta (15 minutos): generales/corta.html
+cp slides/corta.html "$worktree/generales/"
+cp -R slides/corta_files "$worktree/generales/"
 
 git -C "$worktree" add generales
 if git -C "$worktree" diff --cached --quiet; then
@@ -53,6 +55,7 @@ git -C "$worktree" commit --quiet -m "Publica las slides de generales ($fecha_ho
 if $subir; then
   git -C "$worktree" push origin HEAD:gh-pages
   echo "Publicado: https://joscani.github.io/bayesian-metaanalisis/generales/"
+  echo "Versión corta: https://joscani.github.io/bayesian-metaanalisis/generales/corta.html"
 else
   echo "Commit creado en un worktree temporal y descartado: no se ha subido nada."
 fi

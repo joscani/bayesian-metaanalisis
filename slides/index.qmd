@@ -28,46 +28,7 @@ knitr:
 
 ```{r}
 #| label: setup
-library(tidyverse)
-library(here)
-
-source(here("R", "00_setup.R"))
-
-# con estimacion_29n = false desaparecen las slides con encuestas o estimaciones
-# del 29N. Se renderiza con: quarto render slides/index.qmd -P estimacion_29n:false
-estim <- isTRUE(params$estimacion_29n)
-
-leer_fig <- function(nombre) {
-  readRDS(here("outputs", "figuras", paste0(nombre, ".rds")))
-}
-leer <- function(nombre) readRDS(here("outputs", paste0(nombre, ".rds")))
-
-procedencia <- leer("procedencia")
-capa_error <- leer("capa_error")
-diagnosticos <- leer("diagnosticos")
-
-comparacion <- read_csv(
-  here("data", "backtest_prov_comparacion.csv"),
-  show_col_types = FALSE
-)
-cob_prov <- function(v) {
-  comparacion$cobertura[
-    comparacion$variante == v & comparacion$familia == "TOTAL"
-  ]
-}
-backtest <- read_csv(
-  here("data", "backtest_escanos.csv"),
-  show_col_types = FALSE
-)
-reglas <- read_csv(
-  here("data", "coaliciones_izquierda_29N_provincias.csv"),
-  col_types = cols(.default = col_character())
-) |>
-  count(regla)
-n_regla <- function(r) reglas$n[reglas$regla == r]
-
-corte <- format(procedencia$ultima_encuesta, "%d/%m/%Y")
-peso_electopanel <- leer("peso_electopanel")
+source(here::here("slides", "_setup.R"), local = TRUE)
 ```
 
 ## El problema
@@ -95,29 +56,8 @@ Con un enfoque bayesiano no perseguimos **el número**.
 Perseguimos **la distribución completa** y, con ella, la probabilidad de cada mayoría.
 :::
 
-## El flujo en una imagen
-
-La materia prima son las encuestas publicadas (y vienen sin los microdatos)
-
-::: {.center-text style="font-size: 0.72em; line-height: 1.75;"}
-**Encuestas**
-
-⬇ *dos modelos brms en cascada*
-
-**Posterior nacional de 14 categorías**
-
-⬇ *+ error histórico de las encuestas*
-
-**Posterior ajustado**
-
-⬇ *+ reparto provincial con dos efectos + candidaturas de cada provincia*
-
-**Posterior provincial**
-
-⬇ *D'Hondt, provincia a provincia*
-
-**Distribución posterior de escaños**
-:::
+```{r, child="_flujo.qmd"}
+```
 
 ## Los datos
 
@@ -168,38 +108,8 @@ Cada fila es una encuesta. `trials(n)` es la suma de su fila: la encuesta B pesa
 - El detalle está en el [post de voto](https://muestrear-no-es-pecado.es/2026/10/meta-analisis-generales-jlcr).
 :::
 
-## Modelo 1
-
-Modelo **multinomial bayesiano** con `brms`: cada encuesta aporta un vector de votos.
-
-```{r}
-#| echo: true
-#| eval: false
-#| label: snippet-modelo
-form <- brmsformula(
-  cell_counts | trials(n) ~ time + (1 | encuestadora)
-)
-brm(form, dat, multinomial(),
-    prior = priors_multinomial(form, dat),
-    iter = 4000, warmup = 1000, chains = 4, init = 0.1,
-    control = list(adapt_delta = 0.95, max_treedepth = 12))
+```{r, child="_modelo1.qmd"}
 ```
-
-::: {.incremental}
-- `(1 | encuestadora)`: el **efecto casa**, sin pendiente propia
-- `time`: días desde el 1 de julio; una tendencia común por partido
-- En Andalucía era `(time | empresa)`: con pocas encuestas por casa, no se aprende
-:::
-
-::: {.notes}
-- `cell_counts` es una matriz con una columna por categoría: los votos de cada encuesta, porcentaje publicado por tamaño muestral.
-- `trials(n)` indica el total de cada fila. Así, una encuesta con más muestra pesa más.
-- El multinomial usa el PP como referencia: cada categoría se modela en log-odds frente al PP, que no tiene ecuación propia.
-- `time` da una pendiente por categoría, común a todas las casas.
-- `(1 | encuestadora)` da un intercepto por casa y por categoría. Las casas con pocas encuestas se encogen hacia 0.
-- Los efectos casa están centrados en 0: el modelo estima la media de las encuestadoras, no el resultado.
-- `init = 0.1`, `adapt_delta = 0.95` y `max_treedepth = 12` hacen el muestreo más prudente, a cambio de más tiempo.
-:::
 
 ## Modelo 2
 
@@ -238,38 +148,9 @@ brm(
 - ElectoPanel está en este modelo y no en el modelo 1. Aquí hace falta porque es de las pocas casas que publican los regionales.
 :::
 
-## Del ajuste a los draws
-
-`posterior_epred()` da una proporción por draw y categoría, para el día de la elección.
-
-```{r}
-#| echo: true
-#| eval: false
-#| label: snippet-epred
-# Modelo 1: una fila por casa y media entre casas, draw a draw
-casas <- unique(as.character(mod_1$data$encuestadora))
-nd <- tibble(time = t_e, n = 1, encuestadora = casas)
-ep <- posterior_epred(mod_1, newdata = nd) # 12.000 × 15 casas × 7
-d1 <- apply(ep, c(1, 3), mean)             # 12.000 × 7
-
-# Modelo 2: reparto interno del BLOQUE
-nd <- tibble(time = t_e, bloque = 1)
-d2 <- posterior_epred(mod_2, newdata = nd)[, 1, ] # 12.000 × 8
+```{r, child="_draws.qmd"}
 ```
 
-- `n = 1` y `bloque = 1`: con un ensayo, el epred es una proporción
-- El array es draws × filas de `newdata` × categorías: `apply()` promedia las casas
-
-::: {.notes}
-- Es la pieza que une `brm()` con todo lo demás: de aquí en adelante solo opero con matrices de draws.
-- `t_e` es `time` en la fecha de la elección: los días desde el 1 de julio hasta el 29N.
-- `posterior_epred()` da el valor esperado, sin ruido multinomial. `posterior_predict()` añadiría ese ruido y daría recuentos.
-- El modelo 1 da 7 categorías y el modelo 2 da 8 subceldas. Al repartir el BLOQUE salen las 14 categorías.
-- Por qué una media entre casas: está en la slide extra "Lección de brms".
-- `apply(ep, c(1, 3), mean)` mantiene las dimensiones 1 (draws) y 3 (categorías) y promedia la 2 (casas). Cada draw usa los mismos parámetros para todas las casas, así que la media se hace draw a draw.
-- Código real en `R/01_exportar_desde_blog.R`, función `epred_casa_media()`. Antes tenía un bucle por casa: da lo mismo (diferencia máxima de 1e-16 con 500 draws), pero esta versión es unas 20 veces más rápida.
-- En la simulación uso 6.000 draws de cada modelo, de los 12.000 ajustados.
-:::
 
 
 
@@ -286,30 +167,8 @@ d2 <- posterior_epred(mod_2, newdata = nd)[, 1, ] # 12.000 × 8
 4. **Las candidaturas:** no son iguales en todas las provincias
 :::
 
-## El error histórico
-
-Lo estima el modelo [full bayesian](https://muestrear-no-es-pecado.es/2026/10/full-bayesian/full-bayesian): 5 generales y 39 autonómicas, **44 elecciones**.
-
-::: {.incremental}
-- Cada draw trae su propio sesgo, su desviación y su correlación: **no hay valores fijos**
-- Desviación típica del error, en puntos: PP `r num_es(capa_error$sigma_pp[["PP"]], 1)`, PSOE `r num_es(capa_error$sigma_pp[["PSOE"]], 1)`, VOX `r num_es(capa_error$sigma_pp[["VOX"]], 1)`
-- **Correlación entre el error con PP y el error con VOX: `r num_neg(capa_error$cor_pp_vox)`**
-:::
-
-::: {.callout .fragment style="margin-top: 1em;"}
-El IC 90 % de esa correlación es [`r num_neg(capa_error$cor_pp_vox_q05)`; `r num_neg(capa_error$cor_pp_vox_q95)`].
-
-Si las encuestas se pasan con uno, se quedan cortas con el otro: fallan más al **repartir** entre PP y VOX que con su suma.
-:::
-
-::: {.notes}
-- Uso los draws de `err_new` del full bayesian: el error de una elección nueva, logit(resultado) − logit(voto latente). Hay `r capa_error$n_draws` draws.
-- Cada draw de `err_new` sale de un draw de μ, σ y `Omega`. Así la capa arrastra la incertidumbre de los tres.
-- Las desviaciones en puntos son aproximadas: aplico `err_new` al voto mediano del día E.
-- Antes usaba un error fijo de 5 generales: σ de 1,3 a 2,6 puntos y VOX en 1,3. Con él, P(PP + VOX ≥ 176) daba 98,9 % (encuestas hasta el 6 nov).
-- VOX solo se presentó en 3 de esas 5 generales. Con 44 elecciones, su σ sale más del doble.
-- El BLOQUE lleva un shock propio de 1,5 puntos: es un supuesto, no una estimación.
-:::
+```{r, child="_error.qmd"}
+```
 
 ## El error histórico, en código
 
@@ -355,37 +214,8 @@ Hipótesis: cada partido mantiene su desvío provincial del 23J.
 Backtest provincial, 912 celdas: promete 90 %, **cubre `r pct_es(cob_prov("dirichlet (baseline)"), 0)`**.
 :::
 
-## Provincia: dos efectos con brms
-
-El cambio de ratio tiene un efecto de **comunidad** y otro de **provincia**.
-
-```{r}
-#| echo: true
-#| eval: false
-bf(
-   dlr ~ 0 + partido + repeticion + (0 + partido || codigo_ccaa),
-   sigma ~ 0 + celda_sigma
-)
+```{r, child="_provincia_brms.qmd"}
 ```
-
-La cobertura sube a **`r pct_es(cob_prov("shock brms (draws)"), 0)`**, calculada con las mismas elecciones que calibran los efectos.
-
-Sin la transición probada, la cobertura no cambia (*leave-one-transition-out*).
-
-::: {.notes}
-- `dlr` es Δ log r: cuánto cambia el logaritmo del ratio provincial de un partido entre dos elecciones.
-- `0 + partido` quita el intercepto común: cada partido tiene su propia media. `repeticion` marca las elecciones repetidas, donde la geografía apenas cambia.
-- **`|` frente a `||`:** con `|`, brms estima las correlaciones entre los efectos del grupo. Con `||`, los estima independientes.
-- `(0 + partido || codigo_ccaa)` da a cada comunidad una desviación por partido, sin correlaciones. Cada partido tiene su propia desviación entre comunidades: su τ_c.
-- ¿Por qué no `(1 | partido:ccaa)`? Porque daría una única τ_c para todos los partidos, y VOX se mueve en bloque por comunidad, mientras que el PP se mueve más provincia a provincia.
-- `sigma ~ 0 + celda_sigma` es un modelo distribucional: la desviación residual también tiene su regresión. brms modela `sigma` en escala logarítmica.
-- **`celda_sigma`** combina partido y tipo de transición: `PP × fresca`, `PP × repetición`, `VOX × fresca`, etc. Cada celda tiene su propia desviación residual: su τ_p.
-- **Transición** es el paso de una elección a la siguiente. Es *fresca* si hay tiempo real entre ambas, como del 10N al 23J. Es *repetición* si se repite a los pocos meses, como del 20D al 26J.
-- **Por qué hace falta:** en las repeticiones el reparto provincial apenas cambia. Con una sola `sigma`, esas elecciones reducirían el ruido estimado para el 29N. τ_p del PP: 0,173 en frescas y 0,050 en repeticiones. τ_p de VOX: 0,199 y 0,063.
-- El 29N es una transición fresca: la simulación usa las τ_p de esas celdas.
-- En la simulación, cada draw multiplica el ratio por exp(η + ε) y se renormaliza, para no cambiar el voto nacional.
-- La cobertura de esta slide es *in-sample*. El *leave-one-transition-out* reestima sin la transición probada y la cobertura no se mueve.
-:::
 
 ## Provincia: de los draws al voto
 
@@ -458,7 +288,16 @@ dhondt <- function(votos, escanos) {
 - Antes, cada provincia deja a 0 a quien no llega al **3 %**
 - Ceuta y Melilla eligen 1 escaño: D'Hondt equivale a mayoría simple
 
-```{r, child=if (estim) "_resultados.qmd"}
+```{r, child=if (estim) "_res_grandes.qmd"}
+```
+
+```{r, child=if (estim) "_res_resto.qmd"}
+```
+
+```{r, child=if (estim) "_res_canarias.qmd"}
+```
+
+```{r, child=if (estim) "_mayorias.qmd"}
 ```
 
 ## ¿Y si lo hubiera hecho antes?
@@ -524,6 +363,7 @@ Una foto de las encuestas, no una predicción del domingo.
 [Escaños](https://muestrear-no-es-pecado.es/2026/10/meta-analisis-generales-escanos-jlcr) ·
 [Candidaturas](https://muestrear-no-es-pecado.es/2026/10/frente_amplio_y_adelante_andalucia/frente_amplio_y_adelante_andalucia)
 
+[Versión corta](corta.html) ·
 [Las slides de Andalucía](https://joscani.github.io/bayesian-metaanalisis/andalucia/)
 :::
 :::
