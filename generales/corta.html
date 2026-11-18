@@ -253,6 +253,7 @@ José Luis Cañadas Reche
 <ul>
 <li><a href="https://www.ciento76.es/encuestas">ciento76</a> y <a href="https://objetivo176.es/encuestas">objetivo176</a>, solo con <strong>tamaño muestral publicado</strong></li>
 <li>Modelo 1: <strong>46 encuestas de 18 casas</strong>, hasta el 17/11/2026. Sin CIS ni ElectoPanel</li>
+<li>Modelo 2: <strong>81 encuestas de 10 casas</strong>, desde junio de 2025</li>
 </ul>
 </div>
 <aside class="notes">
@@ -311,19 +312,62 @@ José Luis Cañadas Reche
           display:block!important;
       }</style></aside>
 </section>
+<section id="modelo-2" class="slide level2">
+<h2>Modelo 2</h2>
+<p>Reparte el BLOQUE entre Junts, ERC, PNV, EH Bildu, BNG, CC, UPN y RESTO.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="" aria-label="1"></a>form <span class="ot">&lt;-</span> <span class="fu">brmsformula</span>(cell_counts <span class="sc">|</span> <span class="fu">trials</span>(bloque) <span class="sc">~</span> time)</span>
+<span id="cb2-2"><a href="" aria-label="2"></a></span>
+<span id="cb2-3"><a href="" aria-label="3"></a><span class="fu">brm</span>(</span>
+<span id="cb2-4"><a href="" aria-label="4"></a>    form,</span>
+<span id="cb2-5"><a href="" aria-label="5"></a>    dat,</span>
+<span id="cb2-6"><a href="" aria-label="6"></a>    <span class="fu">multinomial</span>(),</span>
+<span id="cb2-7"><a href="" aria-label="7"></a>    <span class="at">prior =</span> <span class="fu">priors_multinomial</span>(form, dat),</span>
+<span id="cb2-8"><a href="" aria-label="8"></a>    <span class="at">iter =</span> <span class="dv">4000</span>,</span>
+<span id="cb2-9"><a href="" aria-label="9"></a>    <span class="at">warmup =</span> <span class="dv">1000</span>,</span>
+<span id="cb2-10"><a href="" aria-label="10"></a>    <span class="at">chains =</span> <span class="dv">4</span>,</span>
+<span id="cb2-11"><a href="" aria-label="11"></a>    <span class="at">init =</span> <span class="fl">0.1</span>,</span>
+<span id="cb2-12"><a href="" aria-label="12"></a>    <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.95</span>)</span>
+<span id="cb2-13"><a href="" aria-label="13"></a>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<ul>
+<li class="fragment"><code>trials(bloque)</code>: los votos <strong>del BLOQUE</strong>, no la muestra</li>
+<li class="fragment">Sin efecto casa: ElectoPanel pesa el 49 % de los votos del BLOQUE</li>
+<li class="fragment">Ventana larga, desde junio de 2025: hay pocas encuestas con regionales</li>
+</ul>
+<aside class="notes">
+<ul>
+<li><code>trials(bloque)</code> es la diferencia clave: el total son los votos del BLOQUE. Una encuesta con n = 1.000 y BLOQUE del 11 % entra con 110 votos.</li>
+<li>El modelo solo aprende el reparto interno. El tamaño del BLOQUE lo da el modelo 1.</li>
+<li>La referencia es Junts: los coeficientes son log-odds de cada subcelda frente a Junts.</li>
+<li>No lleva efecto casa porque los niveles están muy desbalanceados: ElectoPanel domina el peso.</li>
+<li>ElectoPanel está en este modelo y no en el modelo 1. Aquí hace falta porque es de las pocas casas que publican los regionales.</li>
+</ul>
+<style type="text/css">
+        span.MJX_Assistive_MathML {
+          position:absolute!important;
+          clip: rect(1px, 1px, 1px, 1px);
+          padding: 1px 0 0 0!important;
+          border: 0!important;
+          height: 1px!important;
+          width: 1px!important;
+          overflow: hidden!important;
+          display:block!important;
+      }</style></aside>
+</section>
 <section id="del-ajuste-a-los-draws" class="slide level2">
 <h2>Del ajuste a los draws</h2>
 <p><code>posterior_epred()</code> da una proporción por draw y categoría, para el día de la elección.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="" aria-label="1"></a><span class="co"># Modelo 1: una fila por casa y media entre casas, draw a draw</span></span>
-<span id="cb2-2"><a href="" aria-label="2"></a>casas <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">as.character</span>(mod_1<span class="sc">$</span>data<span class="sc">$</span>encuestadora))</span>
-<span id="cb2-3"><a href="" aria-label="3"></a>nd <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">time =</span> t_e, <span class="at">n =</span> <span class="dv">1</span>, <span class="at">encuestadora =</span> casas)</span>
-<span id="cb2-4"><a href="" aria-label="4"></a>ep <span class="ot">&lt;-</span> <span class="fu">posterior_epred</span>(mod_1, <span class="at">newdata =</span> nd) <span class="co"># 12.000 × 15 casas × 7</span></span>
-<span id="cb2-5"><a href="" aria-label="5"></a>d1 <span class="ot">&lt;-</span> <span class="fu">apply</span>(ep, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>), mean)             <span class="co"># 12.000 × 7</span></span>
-<span id="cb2-6"><a href="" aria-label="6"></a></span>
-<span id="cb2-7"><a href="" aria-label="7"></a><span class="co"># Modelo 2: reparto interno del BLOQUE</span></span>
-<span id="cb2-8"><a href="" aria-label="8"></a>nd <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">time =</span> t_e, <span class="at">bloque =</span> <span class="dv">1</span>)</span>
-<span id="cb2-9"><a href="" aria-label="9"></a>d2 <span class="ot">&lt;-</span> <span class="fu">posterior_epred</span>(mod_2, <span class="at">newdata =</span> nd)[, <span class="dv">1</span>, ] <span class="co"># 12.000 × 8</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="" aria-label="1"></a><span class="co"># Modelo 1: una fila por casa y media entre casas, draw a draw</span></span>
+<span id="cb3-2"><a href="" aria-label="2"></a>casas <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">as.character</span>(mod_1<span class="sc">$</span>data<span class="sc">$</span>encuestadora))</span>
+<span id="cb3-3"><a href="" aria-label="3"></a>nd <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">time =</span> t_e, <span class="at">n =</span> <span class="dv">1</span>, <span class="at">encuestadora =</span> casas)</span>
+<span id="cb3-4"><a href="" aria-label="4"></a>ep <span class="ot">&lt;-</span> <span class="fu">posterior_epred</span>(mod_1, <span class="at">newdata =</span> nd) <span class="co"># 12.000 × 15 casas × 7</span></span>
+<span id="cb3-5"><a href="" aria-label="5"></a>d1 <span class="ot">&lt;-</span> <span class="fu">apply</span>(ep, <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>), mean)             <span class="co"># 12.000 × 7</span></span>
+<span id="cb3-6"><a href="" aria-label="6"></a></span>
+<span id="cb3-7"><a href="" aria-label="7"></a><span class="co"># Modelo 2: reparto interno del BLOQUE</span></span>
+<span id="cb3-8"><a href="" aria-label="8"></a>nd <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">time =</span> t_e, <span class="at">bloque =</span> <span class="dv">1</span>)</span>
+<span id="cb3-9"><a href="" aria-label="9"></a>d2 <span class="ot">&lt;-</span> <span class="fu">posterior_epred</span>(mod_2, <span class="at">newdata =</span> nd)[, <span class="dv">1</span>, ] <span class="co"># 12.000 × 8</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <ul>
 <li><code>n = 1</code> y <code>bloque = 1</code>: con un ensayo, el epred es una proporción</li>
@@ -395,10 +439,10 @@ José Luis Cañadas Reche
 <h2>Provincia: dos efectos con brms</h2>
 <p>El cambio de ratio tiene un efecto de <strong>comunidad</strong> y otro de <strong>provincia</strong>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="" aria-label="1"></a><span class="fu">bf</span>(</span>
-<span id="cb3-2"><a href="" aria-label="2"></a>   dlr <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> partido <span class="sc">+</span> repeticion <span class="sc">+</span> (<span class="dv">0</span> <span class="sc">+</span> partido <span class="sc">||</span> codigo_ccaa),</span>
-<span id="cb3-3"><a href="" aria-label="3"></a>   sigma <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> celda_sigma</span>
-<span id="cb3-4"><a href="" aria-label="4"></a>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="" aria-label="1"></a><span class="fu">bf</span>(</span>
+<span id="cb4-2"><a href="" aria-label="2"></a>   dlr <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> partido <span class="sc">+</span> repeticion <span class="sc">+</span> (<span class="dv">0</span> <span class="sc">+</span> partido <span class="sc">||</span> codigo_ccaa),</span>
+<span id="cb4-3"><a href="" aria-label="3"></a>   sigma <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> celda_sigma</span>
+<span id="cb4-4"><a href="" aria-label="4"></a>)</span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>La cobertura sube a <strong>94 %</strong>, calculada con las mismas elecciones que calibran los efectos.</p>
 <p>Sin la transición probada, la cobertura no cambia (<em>leave-one-transition-out</em>).</p>
@@ -465,17 +509,17 @@ José Luis Cañadas Reche
 <h2>Cada draw es un Congreso</h2>
 <p>Con los draws, una pregunta sobre mayorías es contar. Código real, sobre las simulaciones de esta charla:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="" aria-label="1"></a>draws <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"outputs"</span>, <span class="st">"escanos_draws.rds"</span>))</span>
-<span id="cb4-2"><a href="" aria-label="2"></a><span class="co"># P(PP + VOX tienen mayoría absoluta)</span></span>
-<span id="cb4-3"><a href="" aria-label="3"></a><span class="fu">mean</span>(draws<span class="sc">$</span>PP <span class="sc">+</span> draws<span class="sc">$</span>VOX <span class="sc">&gt;=</span> <span class="dv">176</span>)</span>
-<span id="cb4-4"><a href="" aria-label="4"></a><span class="do">## [1] 0.9033333</span></span>
-<span id="cb4-5"><a href="" aria-label="5"></a><span class="co"># P(PP tiene más escaños que PSOE)</span></span>
-<span id="cb4-6"><a href="" aria-label="6"></a><span class="fu">mean</span>(draws<span class="sc">$</span>PP <span class="sc">&gt;</span> draws<span class="sc">$</span>PSOE)</span>
-<span id="cb4-7"><a href="" aria-label="7"></a><span class="do">## [1] 0.6605</span></span>
-<span id="cb4-8"><a href="" aria-label="8"></a><span class="co"># intervalo de la suma</span></span>
-<span id="cb4-9"><a href="" aria-label="9"></a><span class="fu">quantile</span>(draws<span class="sc">$</span>PP <span class="sc">+</span> draws<span class="sc">$</span>VOX, <span class="fu">c</span>(<span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.95</span>))</span>
-<span id="cb4-10"><a href="" aria-label="10"></a><span class="do">##  5% 50% 95% </span></span>
-<span id="cb4-11"><a href="" aria-label="11"></a><span class="do">## 172 190 208</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="" aria-label="1"></a>draws <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"outputs"</span>, <span class="st">"escanos_draws.rds"</span>))</span>
+<span id="cb5-2"><a href="" aria-label="2"></a><span class="co"># P(PP + VOX tienen mayoría absoluta)</span></span>
+<span id="cb5-3"><a href="" aria-label="3"></a><span class="fu">mean</span>(draws<span class="sc">$</span>PP <span class="sc">+</span> draws<span class="sc">$</span>VOX <span class="sc">&gt;=</span> <span class="dv">176</span>)</span>
+<span id="cb5-4"><a href="" aria-label="4"></a><span class="do">## [1] 0.9033333</span></span>
+<span id="cb5-5"><a href="" aria-label="5"></a><span class="co"># P(PP tiene más escaños que PSOE)</span></span>
+<span id="cb5-6"><a href="" aria-label="6"></a><span class="fu">mean</span>(draws<span class="sc">$</span>PP <span class="sc">&gt;</span> draws<span class="sc">$</span>PSOE)</span>
+<span id="cb5-7"><a href="" aria-label="7"></a><span class="do">## [1] 0.6605</span></span>
+<span id="cb5-8"><a href="" aria-label="8"></a><span class="co"># intervalo de la suma</span></span>
+<span id="cb5-9"><a href="" aria-label="9"></a><span class="fu">quantile</span>(draws<span class="sc">$</span>PP <span class="sc">+</span> draws<span class="sc">$</span>VOX, <span class="fu">c</span>(<span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.95</span>))</span>
+<span id="cb5-10"><a href="" aria-label="10"></a><span class="do">##  5% 50% 95% </span></span>
+<span id="cb5-11"><a href="" aria-label="11"></a><span class="do">## 172 190 208</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <aside class="notes">
 <ul>
