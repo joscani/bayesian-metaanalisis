@@ -211,7 +211,7 @@ José Luis Cañadas Reche
             Jornadas de R de Canarias
           </p>
         <p class="quarto-title-affiliation">
-            Actualizado el 17/11/2026
+            Actualizado el 18/11/2026
           </p>
     </div>
 </div>
@@ -252,13 +252,13 @@ José Luis Cañadas Reche
 <img data-src="corta_files/figure-revealjs/g-fig-encuestas-tiempo-1.svg" class="r-stretch"><div style="font-size: 0.7em;">
 <ul>
 <li><a href="https://www.ciento76.es/encuestas">ciento76</a> y <a href="https://objetivo176.es/encuestas">objetivo176</a>, solo con <strong>tamaño muestral publicado</strong></li>
-<li>Modelo 1: <strong>44 encuestas de 18 casas</strong>, hasta el 15/11/2026. Sin CIS ni ElectoPanel</li>
+<li>Modelo 1: <strong>46 encuestas de 18 casas</strong>, hasta el 17/11/2026. Sin CIS ni ElectoPanel</li>
 </ul>
 </div>
 <aside class="notes">
 <ul>
 <li>Trackings que acumulan (SW Demoscopia, SocioMétrica): solo la entrega más reciente de campos solapados.</li>
-<li>La mayoría de encuestas no publica PNV, BNG o Junts. El modelo 1 los agrupa en un BLOQUE y un modelo 2 reparte el BLOQUE entre 8 subceldas, con 73 encuestas desde junio de 2025.</li>
+<li>La mayoría de encuestas no publica PNV, BNG o Junts. El modelo 1 los agrupa en un BLOQUE y un modelo 2 reparte el BLOQUE entre 8 subceldas, con 81 encuestas desde junio de 2025.</li>
 </ul>
 <style type="text/css">
         span.MJX_Assistive_MathML {
@@ -468,14 +468,14 @@ José Luis Cañadas Reche
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="" aria-label="1"></a>draws <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="fu">here</span>(<span class="st">"outputs"</span>, <span class="st">"escanos_draws.rds"</span>))</span>
 <span id="cb4-2"><a href="" aria-label="2"></a><span class="co"># P(PP + VOX tienen mayoría absoluta)</span></span>
 <span id="cb4-3"><a href="" aria-label="3"></a><span class="fu">mean</span>(draws<span class="sc">$</span>PP <span class="sc">+</span> draws<span class="sc">$</span>VOX <span class="sc">&gt;=</span> <span class="dv">176</span>)</span>
-<span id="cb4-4"><a href="" aria-label="4"></a><span class="do">## [1] 0.903</span></span>
+<span id="cb4-4"><a href="" aria-label="4"></a><span class="do">## [1] 0.9033333</span></span>
 <span id="cb4-5"><a href="" aria-label="5"></a><span class="co"># P(PP tiene más escaños que PSOE)</span></span>
 <span id="cb4-6"><a href="" aria-label="6"></a><span class="fu">mean</span>(draws<span class="sc">$</span>PP <span class="sc">&gt;</span> draws<span class="sc">$</span>PSOE)</span>
-<span id="cb4-7"><a href="" aria-label="7"></a><span class="do">## [1] 0.6761667</span></span>
+<span id="cb4-7"><a href="" aria-label="7"></a><span class="do">## [1] 0.6605</span></span>
 <span id="cb4-8"><a href="" aria-label="8"></a><span class="co"># intervalo de la suma</span></span>
 <span id="cb4-9"><a href="" aria-label="9"></a><span class="fu">quantile</span>(draws<span class="sc">$</span>PP <span class="sc">+</span> draws<span class="sc">$</span>VOX, <span class="fu">c</span>(<span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.95</span>))</span>
 <span id="cb4-10"><a href="" aria-label="10"></a><span class="do">##  5% 50% 95% </span></span>
-<span id="cb4-11"><a href="" aria-label="11"></a><span class="do">## 171 190 208</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-11"><a href="" aria-label="11"></a><span class="do">## 172 190 208</span></span></code></pre></div><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <aside class="notes">
 <ul>
