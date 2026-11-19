@@ -65,6 +65,7 @@ leer_fig("fig_encuestas_tiempo")
 ::: {style="font-size: 0.7em;"}
 - [ciento76](https://www.ciento76.es/encuestas) y [objetivo176](https://objetivo176.es/encuestas), solo con **tamaño muestral publicado**
 - Modelo 1: **`r procedencia$n_encuestas_m1` encuestas de `r procedencia$n_casas_m1` casas**, hasta el `r corte`. Sin CIS ni ElectoPanel
+- Modelo 2: **`r procedencia$n_encuestas_m2` encuestas de `r procedencia$n_casas_m2` casas**, desde junio de 2025
 :::
 
 ::: {.notes}
@@ -73,6 +74,9 @@ leer_fig("fig_encuestas_tiempo")
 :::
 
 ```{r, child="_modelo1.qmd"}
+```
+
+```{r, child="_modelo2.qmd"}
 ```
 
 ```{r, child="_draws.qmd"}

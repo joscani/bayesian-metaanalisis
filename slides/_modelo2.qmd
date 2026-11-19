@@ -1,0 +1,36 @@
+## Modelo 2
+
+Reparte el BLOQUE entre Junts, ERC, PNV, EH Bildu, BNG, CC, UPN y RESTO.
+
+```{r}
+#| echo: true
+#| eval: false
+#| label: snippet-modelo-2
+form <- brmsformula(cell_counts | trials(bloque) ~ time)
+
+brm(
+    form,
+    dat,
+    multinomial(),
+    prior = priors_multinomial(form, dat),
+    iter = 4000,
+    warmup = 1000,
+    chains = 4,
+    init = 0.1,
+    control = list(adapt_delta = 0.95)
+)
+```
+
+::: {.incremental}
+- `trials(bloque)`: los votos **del BLOQUE**, no la muestra
+- Sin efecto casa: ElectoPanel pesa el `r pct_es(peso_electopanel, 0)` de los votos del BLOQUE
+- Ventana larga, desde junio de 2025: hay pocas encuestas con regionales
+:::
+
+::: {.notes}
+- `trials(bloque)` es la diferencia clave: el total son los votos del BLOQUE. Una encuesta con n = 1.000 y BLOQUE del 11 % entra con 110 votos.
+- El modelo solo aprende el reparto interno. El tamaño del BLOQUE lo da el modelo 1.
+- La referencia es Junts: los coeficientes son log-odds de cada subcelda frente a Junts.
+- No lleva efecto casa porque los niveles están muy desbalanceados: ElectoPanel domina el peso.
+- ElectoPanel está en este modelo y no en el modelo 1. Aquí hace falta porque es de las pocas casas que publican los regionales.
+:::
