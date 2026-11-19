@@ -408,7 +408,7 @@ file.copy(
 # al contar encuestas, para que la regla no parezca una pérdida de datos
 tracking_fuera <- function(f, modelo) {
   d <- readr::read_csv(f, show_col_types = FALSE) |>
-    distinct(encuestadora, campo, enlace, fecha)
+    distinct(encuestadora, campo, enlace, fecha, muestra)
   invisible(capture.output(r <- quitar_tracking_solapado(d)))
   anti_join(d, r, by = c("encuestadora", "campo", "enlace")) |>
     mutate(modelo = modelo, .before = 1)
