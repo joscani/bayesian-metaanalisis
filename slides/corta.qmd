@@ -97,6 +97,9 @@ leer_fig("fig_encuestas_tiempo")
 ```{r, child=if (estim) "_mayorias.qmd"}
 ```
 
+```{r, child=if (estim) "_heatmap_ppvox.qmd"}
+```
+
 ## Limitaciones y un único modelo
 
 ::: {.callout style="font-size: 0.75em;"}

@@ -93,18 +93,6 @@ cand$escanos |>
 - Comparten semilla, modelo y capas: la diferencia es el efecto de la regla provincial.
 :::
 
-## PP y VOX, conjuntamente
-
-```{r}
-#| label: g-fig-heatmap-ppvox
-#| fig-height: 5
-leer_fig("fig_heatmap_ppvox")
+```{r, child="_heatmap_ppvox.qmd"}
 ```
-
-::: {.notes}
-- Cada celda cuenta las simulaciones con esa combinación de escaños.
-- La línea discontinua marca PP + VOX = 176: por debajo no suman mayoría.
-- Una correlación negativa del error inclina la nube: más PP suele ir con menos VOX. Es el reparto del que hablaba en la slide del error histórico.
-- Lo que muestra es que el error se compensa en la suma, no que PP y VOX se disputen los mismos votantes.
-:::
 
